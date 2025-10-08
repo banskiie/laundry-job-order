@@ -4,10 +4,12 @@ import { IUser } from "./user.interface"
 
 export enum OrderStatus {
   RECEIVED = "RECEIVED",
-  READY_TO_PAY = "READY_TO_PAY",
+  FOR_WASHING = "FOR_WASHING",
+  PENDING_PAYMENT = "PENDING_PAYMENT",
   PARTIALLY_PAID = "PARTIALLY_PAID",
-  FULLY_PAID = "FULLY_PAID",
+  PAID = "PAID",
   RELEASED = "RELEASED",
+  CANCELLED = "CANCELLED",
 }
 
 export interface IOrderStatusItem {

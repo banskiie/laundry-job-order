@@ -4,9 +4,10 @@ import { IOrder } from "./order.interface"
 
 export enum PaymentMethod {
   CASH = "CASH",
+  CARD = "CARD",
   GCASH = "GCASH",
   BANK_TRANSFER = "BANK_TRANSFER",
-  CARD = "CARD",
+  SALARY_DEDUCTION = "SALARY_DEDUCTION",
 }
 
 export interface IPayment extends Document {

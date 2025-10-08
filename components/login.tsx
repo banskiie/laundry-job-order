@@ -69,7 +69,6 @@ const Login = () => {
       password: "",
     },
   })
-  console.log(data)
 
   const onSubmit = (payload: z.infer<typeof LoginSchema>) =>
     startTransition(async () => {
@@ -77,7 +76,7 @@ const Login = () => {
         const response = await signIn("credentials", {
           ...payload,
           redirect: true,
-          callbackUrl: "/orders",
+          callbackUrl: "/dashboard",
         })
         if (response?.error) throw new Error(response.error)
       } catch (error: any) {
