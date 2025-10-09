@@ -6,20 +6,20 @@ import { Role } from "./types/user.interface"
 
 const routePermissions = [
   {
-    path: "/dashboard",
-    allowedRoles: [Role.ADMIN],
-  },
-  {
     path: "/users",
     allowedRoles: [Role.ADMIN],
   },
   {
     path: "/payments",
-    allowedRoles: [Role.ADMIN],
+    allowedRoles: [Role.ADMIN, Role.CASHIER],
   },
   {
     path: "/orders",
-    allowedRoles: [Role.ADMIN],
+    allowedRoles: [Role.ADMIN, Role.CASHIER, Role.STAFF],
+  },
+  {
+    path: "/settings",
+    allowedRoles: [Role.ADMIN, Role.CASHIER, Role.STAFF],
   },
 ]
 
@@ -36,9 +36,9 @@ export default withAuth(
           path.startsWith(route.path) && route.allowedRoles.includes(role)
       )
 
-    // Redirect authenticated users from `/` to `/dashboard`
+    // Redirect authenticated users from `/` to `/orders`
     if (pathname === "/" && TOKEN) {
-      return NextResponse.redirect(new URL("/dashboard", req.url))
+      return NextResponse.redirect(new URL("/orders", req.url))
     }
 
     // Block unauthenticated users from accessing protected routes
@@ -48,7 +48,7 @@ export default withAuth(
 
     // Check if user has permission to access the route
     if (TOKEN && !isAuthorized(pathname, ROLE)) {
-      return NextResponse.redirect(new URL("/dashboard", req.url))
+      return NextResponse.redirect(new URL("/orders", req.url))
     }
 
     return NextResponse.next()
@@ -63,16 +63,9 @@ export default withAuth(
 export const config = {
   matcher: [
     "/",
-    "/dashboard/:path*",
-    "/approval/:path*",
-    "/branch/:path*",
-    "/department/:path*",
-    "/dashboard/:path*",
-    "/endorsement/:path*",
-    "/history/:path*",
-    "/log/:path*",
-    "/request/:path*",
-    "/user/:path*",
-    "/vehicle/:path*",
+    "/users/:path*",
+    "/orders/:path*",
+    "/payments/:path*",
+    "/settings/:path*",
   ],
 }

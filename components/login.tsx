@@ -76,8 +76,9 @@ const Login = () => {
         const response = await signIn("credentials", {
           ...payload,
           redirect: true,
-          callbackUrl: "/dashboard",
+          callbackUrl: "/orders",
         })
+        console.log(response)
         if (response?.error) throw new Error(response.error)
       } catch (error: any) {
         console.error(error)
