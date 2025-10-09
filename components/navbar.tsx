@@ -56,7 +56,7 @@ const Navbar = () => {
               return "grid-cols-1"
           }
         })(),
-        "place-items-center border-t"
+        "place-items-center border-t sticky bottom-0 w-full"
       )}
     >
       {NAVBAR_ITEMS.filter((item) => item.allowedRoles.includes(role)).map(
