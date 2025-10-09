@@ -1,7 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { ApolloClient, gql, HttpLink, InMemoryCache } from "@apollo/client"
-import { IUser } from "@/types/user.interface"
 
 const SIGN_IN = gql`
   mutation SignIn($username: String!, $password: String!) {

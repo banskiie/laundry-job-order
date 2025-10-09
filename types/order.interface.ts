@@ -37,6 +37,7 @@ export interface IOrderInput extends Request {
   customerName: string
   orderSlipURL: string
   amountToBePaid: number
+  dateReceived?: Date
   orderStatuses: IOrderStatusItem[]
 }
 

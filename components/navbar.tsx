@@ -5,10 +5,40 @@ import { Button } from "./ui/button"
 import { Notebook, PhilippinePeso, Settings, Users } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { Role } from "@/types/user.interface"
+import { usePathname } from "next/navigation"
+
+const NAVBAR_ITEMS = [
+  {
+    name: "Orders",
+    href: "/orders",
+    icon: Notebook,
+    allowedRoles: [Role.ADMIN, Role.CASHIER, Role.STAFF],
+  },
+  {
+    name: "Payments",
+    href: "/payments",
+    icon: PhilippinePeso,
+    allowedRoles: [Role.ADMIN, Role.CASHIER],
+  },
+  {
+    name: "Users",
+    href: "/users",
+    icon: Users,
+    allowedRoles: [Role.ADMIN],
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+    allowedRoles: [Role.ADMIN, Role.CASHIER, Role.STAFF],
+  },
+]
 
 const Navbar = () => {
   const session: any = useSession()
   const role = session?.data?.user?.role
+  const pathname = usePathname()
 
   return (
     <div
@@ -16,11 +46,11 @@ const Navbar = () => {
         "bg-slate-50 h-18 grid",
         (() => {
           switch (role) {
-            case "ADMIN":
+            case Role.ADMIN:
               return "grid-cols-4"
-            case "CASHIER":
+            case Role.CASHIER:
               return "grid-cols-3"
-            case "STAFF":
+            case Role.STAFF:
               return "grid-cols-2"
             default:
               return "grid-cols-1"
@@ -29,7 +59,25 @@ const Navbar = () => {
         "place-items-center border-t"
       )}
     >
-      <Link href="/orders" className="w-full h-full">
+      {NAVBAR_ITEMS.filter((item) => item.allowedRoles.includes(role)).map(
+        (item) => (
+          <Link href={item.href} className="w-full h-full" key={item.name}>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              className={cn(
+                "h-full rounded-none w-full hover:bg-slate-100 hover:cursor-pointer flex flex-col pt-2",
+                pathname === item.href &&
+                  "bg-primary text-white hover:bg-primary hover:text-white"
+              )}
+            >
+              {item.icon && <item.icon className="size-8" />}
+              <span className="-mt-2">{item.name}</span>
+            </Button>
+          </Link>
+        )
+      )}
+      {/* <Link href="/orders" className="w-full h-full">
         <Button
           variant="ghost"
           size="icon-lg"
@@ -68,7 +116,7 @@ const Navbar = () => {
           <Settings className="size-8" />
           <span>Settings</span>
         </Button>
-      </Link>
+      </Link> */}
     </div>
   )
 }

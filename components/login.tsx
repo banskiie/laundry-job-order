@@ -28,6 +28,7 @@ import {
 } from "./ui/alert-dialog"
 import { signIn } from "next-auth/react"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 const LoginSchema = z.object({
   username: z.string().nonempty("Username is required"),
@@ -61,7 +62,6 @@ function ForgotPasswordDialog() {
 
 const Login = () => {
   const [isPending, startTransition] = useTransition()
-  const { data } = useSession()
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
     defaultValues: {
@@ -69,17 +69,22 @@ const Login = () => {
       password: "",
     },
   })
+  const router = useRouter()
 
   const onSubmit = (payload: z.infer<typeof LoginSchema>) =>
     startTransition(async () => {
       try {
         const response = await signIn("credentials", {
           ...payload,
-          redirect: true,
+          redirect: false,
           callbackUrl: "/orders",
         })
-        console.log(response)
-        if (response?.error) throw new Error(response.error)
+        if (response?.ok) {
+          router.push(response.url || "/orders")
+        }
+        if (response?.error) {
+          throw new Error(response.error)
+        }
       } catch (error: any) {
         console.error(error)
         form.setError("username", {
