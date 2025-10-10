@@ -51,9 +51,7 @@ const ROWS_INCREMENT = 5
 
 const Page = () => {
   const [rows, setRows] = useState<number>(ROWS_INCREMENT)
-  const [filter, setFilter] = useState<Filter[]>([
-    { key: "currentStatus", value: OrderStatus.RECEIVED, type: "TEXT" },
-  ])
+  const [filter, setFilter] = useState<Filter[]>([])
   const { data, refetch, loading } = useQuery(ORDERS, {
     variables: {
       first: rows,
