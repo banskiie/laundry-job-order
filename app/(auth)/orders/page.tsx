@@ -60,13 +60,11 @@ const Page = () => {
       filter,
     },
     fetchPolicy: "network-only",
-    // pollInterval: 10000,
   })
   const [orderRows, setOrderRows] = useState<any>([])
 
   useEffect(() => {
     if (data) setOrderRows((data as any).orders.edges)
-    console.log(data)
   }, [data])
 
   return (
@@ -75,18 +73,21 @@ const Page = () => {
         <OrderForm refetch={refetch} />
         <Select
           value={
-            (filter.find((f) => f.key === "currentStatus")?.value as string) ||
-            OrderStatus.RECEIVED
+            filter.length
+              ? (filter.find((f) => f.key === "currentStatus")?.value as string)
+              : "*"
           }
-          onValueChange={(value) =>
-            setFilter([{ key: "currentStatus", value, type: "TEXT" }])
-          }
+          onValueChange={(value) => {
+            if (value === "*") setFilter([])
+            else setFilter([{ key: "currentStatus", value, type: "TEXT" }])
+          }}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
+              <SelectItem value="*">All</SelectItem>
               <SelectItem value={OrderStatus.RECEIVED}>Received</SelectItem>
               <SelectItem value={OrderStatus.FOR_PAYMENT}>
                 For Payment
@@ -109,13 +110,15 @@ const Page = () => {
             <span>
               Showing {orderRows.length} results for{" "}
               <span className="font-medium capitalize">
-                {(filter[0]?.value as string).replace("_", " ").toLowerCase()}
+                {filter.length
+                  ? (filter[0]?.value as string).replace("_", " ").toLowerCase()
+                  : "all"}
               </span>
             </span>
           )}
         </span>
         {orderRows.map((o: any) => (
-          <ViewOrder key={o.cursor} _id={o.node._id}>
+          <ViewOrder key={o.cursor} _id={o.node._id} refetch={refetch}>
             <div className="p-2 border flex gap-2 justify-between">
               <div>
                 <span className="block text-sm">

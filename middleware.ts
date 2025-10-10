@@ -30,26 +30,26 @@ export default withAuth(
     const ROLE = TOKEN?.user?.role as Role
 
     // // Helper function to check route permissions
-    // const isAuthorized = (path: string, role: Role) =>
-    //   routePermissions.some(
-    //     (route) =>
-    //       path.startsWith(route.path) && route.allowedRoles.includes(role)
-    //   )
+    const isAuthorized = (path: string, role: Role) =>
+      routePermissions.some(
+        (route) =>
+          path.startsWith(route.path) && route.allowedRoles.includes(role)
+      )
 
-    // // Redirect authenticated users from `/` to `/orders`
-    // if (pathname === "/" && TOKEN) {
-    //   return NextResponse.redirect(new URL("/orders", req.url))
-    // }
+    // Redirect authenticated users from `/` to `/orders`
+    if (pathname === "/" && TOKEN) {
+      return NextResponse.redirect(new URL("/orders", req.url))
+    }
 
-    // // Block unauthenticated users from accessing protected routes
-    // if (!TOKEN && pathname !== "/") {
-    //   return NextResponse.redirect(new URL("/", req.url))
-    // }
+    // Block unauthenticated users from accessing protected routes
+    if (!TOKEN && pathname !== "/") {
+      return NextResponse.redirect(new URL("/", req.url))
+    }
 
-    // // Check if user has permission to access the route
-    // if (TOKEN && !isAuthorized(pathname, ROLE)) {
-    //   return NextResponse.redirect(new URL("/orders", req.url))
-    // }
+    // Check if user has permission to access the route
+    if (TOKEN && !isAuthorized(pathname, ROLE)) {
+      return NextResponse.redirect(new URL("/orders", req.url))
+    }
 
     return NextResponse.next()
   },
@@ -62,7 +62,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/",
     "/users/:path*",
     "/orders/:path*",
     "/payments/:path*",

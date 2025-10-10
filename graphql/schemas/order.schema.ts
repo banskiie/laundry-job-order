@@ -75,5 +75,6 @@ export default gql`
     createOrder(input: CreateOrderInput!): Response!
     updateOrder(input: UpdateOrderInput!): Response!
     deleteOrder(_id: ID!): Response!
+    readyToPayOrder(_id: ID!): Response!
   }
 `

@@ -5,7 +5,6 @@ import { fromCursor, toCursor } from "@/helpers/cursor"
 import Order from "@/models/order.model"
 import type { IDataTableInput } from "@/types/shared.interface"
 import { OrderStatus, type IOrderInput } from "@/types/order.interface"
-import { date } from "zod"
 
 const orderResolvers = {
   Query: {
@@ -95,7 +94,7 @@ const orderResolvers = {
             $sort: {
               ...(sort
                 ? { [sort.key]: sort.order === "ASC" ? 1 : -1 }
-                : { _id: -1 }), // Default to sorting by latest _id if no sort is provided
+                : { updatedAt: -1 }), // Default to sorting by latest _id if no sort is provided
             },
           },
           { $limit: first + 1 },
@@ -208,6 +207,31 @@ const orderResolvers = {
         return {
           ok: true,
           message: "Order deleted successfully",
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+    readyToPayOrder: async (_: any, args: { _id: string }, context: any) => {
+      try {
+        if (!context.session)
+          throw new GraphQLError("Unauthorized", {
+            extensions: { code: "UNAUTHORIZED" },
+          })
+        const order = await Order.findById(args._id)
+        if (!order)
+          throw new GraphQLError("Order not found", {
+            extensions: { code: "NOT_FOUND" },
+          })
+        order.orderStatuses.push({
+          status: OrderStatus.FOR_PAYMENT,
+          date: new Date(),
+          by: context.session.user._id,
+        })
+        await order.save()
+        return {
+          ok: true,
+          message: "Order is now ready for payment",
         }
       } catch (error) {
         throw error
