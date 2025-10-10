@@ -66,8 +66,6 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
       const selectedFile = e.target.files[0]
       if (selectedFile.size > 5 * 1024 * 1024) {
         alert("File size exceeds 5 MB")
-        // 2 MB limit
-        // Reset file input value using ref
         if (imageRef.current) {
           imageRef.current.value = ""
         }
@@ -223,7 +221,7 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
               </div>
             </div>
             <SheetFooter>
-              <Button type="submit" disabled={isPending}>
+              <Button loading={isPending} type="submit">
                 Submit
               </Button>
               <SheetClose asChild>

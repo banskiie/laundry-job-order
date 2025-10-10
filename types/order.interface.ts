@@ -4,8 +4,7 @@ import { IUser } from "./user.interface"
 
 export enum OrderStatus {
   RECEIVED = "RECEIVED",
-  FOR_WASHING = "FOR_WASHING",
-  PENDING_PAYMENT = "PENDING_PAYMENT",
+  FOR_PAYMENT = "FOR_PAYMENT",
   PARTIALLY_PAID = "PARTIALLY_PAID",
   PAID = "PAID",
   RELEASED = "RELEASED",

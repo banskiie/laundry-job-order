@@ -11,7 +11,9 @@ const orderResolvers = {
   Query: {
     order: async (_: any, args: { _id: string }) => {
       try {
-        const order = await Order.findById(args._id)
+        const order = await Order.findById(args._id).populate(
+          "orderStatuses.by"
+        )
 
         if (!order)
           throw new GraphQLError("Order not found", {
@@ -82,6 +84,12 @@ const orderResolvers = {
 
         // Aggregation Pipeline
         const pipeline: PipelineStage[] = [
+          {
+            $addFields: {
+              dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
+              currentStatus: { $arrayElemAt: ["$orderStatuses.status", -1] },
+            },
+          },
           { $match: matchStage },
           {
             $sort: {
@@ -95,7 +103,8 @@ const orderResolvers = {
             $project: {
               customerName: 1,
               amountToBePaid: 1,
-              dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
+              dateReceived: 1,
+              currentStatus: 1,
             },
           },
         ]
@@ -111,6 +120,12 @@ const orderResolvers = {
 
         // Get total count (remove id and count all documents that match other criteria)
         const total = await Order.aggregate([
+          {
+            $addFields: {
+              dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
+              currentStatus: { $arrayElemAt: ["$orderStatuses.status", -1] },
+            },
+          },
           {
             $match: (() => {
               const { _id, ...rest } = matchStage

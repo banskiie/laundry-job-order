@@ -27,7 +27,6 @@ import {
   AlertDialogFooter,
 } from "./ui/alert-dialog"
 import { signIn } from "next-auth/react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 const LoginSchema = z.object({
@@ -153,7 +152,7 @@ const Login = () => {
                 />
               </div>
               <div className="w-full flex flex-col gap-2">
-                <Button disabled={isPending} className="mt-2">
+                <Button loading={isPending} className="mt-2">
                   Sign In
                 </Button>
                 <ForgotPasswordDialog />

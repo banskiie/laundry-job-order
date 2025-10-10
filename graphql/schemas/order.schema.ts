@@ -3,8 +3,7 @@ import { gql } from "graphql-tag"
 export default gql`
   enum OrderStatus {
     RECEIVED
-    FOR_WASHING
-    PENDING_PAYMENT
+    FOR_PAYMENT
     PARTIALLY_PAID
     PAID
     RELEASED
@@ -39,6 +38,7 @@ export default gql`
     customerName: String!
     amountToBePaid: Float!
     dateReceived: DateTime!
+    currentStatus: OrderStatus!
   }
 
   type OrderEdge {
