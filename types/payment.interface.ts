@@ -4,7 +4,8 @@ import { IOrder } from "./order.interface"
 
 export enum PaymentMethod {
   CASH = "CASH",
-  CARD = "CARD",
+  CREDIT_CARD = "CREDIT_CARD",
+  DEBIT_CARD = "DEBIT_CARD",
   GCASH = "GCASH",
   BANK_TRANSFER = "BANK_TRANSFER",
   SALARY_DEDUCTION = "SALARY_DEDUCTION",
@@ -26,6 +27,7 @@ export interface IPaymentInput extends Request {
   paymentMethod: PaymentMethod
   amountPaid: number
   datePaid: Date
+  isFullyPaid?: boolean
 }
 
 export interface IPaymentNode {

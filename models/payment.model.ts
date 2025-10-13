@@ -1,5 +1,5 @@
-import { model, Schema } from "mongoose"
-import { PaymentMethod, type IPayment } from "../types/payment.interface.js"
+import { model, models, Schema } from "mongoose"
+import { PaymentMethod, type IPayment } from "../types/payment.interface"
 
 const Payment = new Schema<IPayment>(
   {
@@ -16,4 +16,4 @@ const Payment = new Schema<IPayment>(
   { timestamps: true }
 )
 
-export default model<IPayment>("Payment", Payment)
+export default models.Payment || model<IPayment>("Payment", Payment)

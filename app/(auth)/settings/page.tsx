@@ -3,28 +3,22 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@radix-ui/react-separator"
 import { signOut, useSession } from "next-auth/react"
 import React from "react"
+import ChangePasswordDialog from "./dialogs/change-password"
 
 const Page = () => {
   const session: any = useSession()
   const user = session?.data?.user
   return (
-    <div className="flex flex-col p-2">
-      <Button
-        className="rounded-none text-left p-0"
-        variant="link"
-        size="lg"
-        onClick={() => signOut()}
-      >
-        <span className="w-full text-left">Export</span>
-      </Button>
+    <div className="flex flex-col p-2 gap-2">
+      <ChangePasswordDialog />
       <Separator />
       <Button
-        className="rounded-none text-left p-0"
-        variant="link"
+        variant="outline"
+        className="bg-destructive/5 border-destructive text-destructive hover:bg-destructive/15 hover:text-destructive"
         size="lg"
         onClick={() => signOut()}
       >
-        <span className="w-full text-left">Sign Out</span>
+        Sign Out
       </Button>
       <div className="flex flex-col">
         <span className="text-muted-foreground text-sm">User Details</span>

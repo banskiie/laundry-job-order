@@ -4,14 +4,18 @@ import { Types, type PipelineStage } from "mongoose"
 import { fromCursor, toCursor } from "@/helpers/cursor"
 import Order from "@/models/order.model"
 import type { IDataTableInput } from "@/types/shared.interface"
-import { OrderStatus, type IOrderInput } from "@/types/order.interface"
+import {
+  OrderStatus,
+  PaymentStatus,
+  type IOrderInput,
+} from "@/types/order.interface"
 
 const orderResolvers = {
   Query: {
     order: async (_: any, args: { _id: string }) => {
       try {
         const order = await Order.findById(args._id).populate(
-          "orderStatuses.by"
+          "orderStatuses.by paymentStatuses.by"
         )
 
         if (!order)
@@ -32,7 +36,10 @@ const orderResolvers = {
 
         // Handle global search
         if (search)
-          matchStage.$or = [{ customerName: { $regex: search, $options: "i" } }]
+          matchStage.$or = [
+            { customerName: { $regex: search, $options: "i" } },
+            { amountToBePaid: Number(search) },
+          ]
 
         // Handle filters
         if (filter && filter.length)
@@ -87,6 +94,7 @@ const orderResolvers = {
             $addFields: {
               dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
               currentStatus: { $arrayElemAt: ["$orderStatuses.status", -1] },
+              paymentStatus: { $arrayElemAt: ["$paymentStatuses.status", -1] },
             },
           },
           { $match: matchStage },
@@ -104,6 +112,7 @@ const orderResolvers = {
               amountToBePaid: 1,
               dateReceived: 1,
               currentStatus: 1,
+              paymentStatus: 1,
             },
           },
         ]
@@ -123,6 +132,7 @@ const orderResolvers = {
             $addFields: {
               dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
               currentStatus: { $arrayElemAt: ["$orderStatuses.status", -1] },
+              paymentStatus: { $arrayElemAt: ["$paymentStatuses.status", -1] },
             },
           },
           {
@@ -164,6 +174,13 @@ const orderResolvers = {
             {
               status: OrderStatus.RECEIVED,
               date: dateReceived,
+              by: context.session.user._id,
+            },
+          ],
+          paymentStatuses: [
+            {
+              status: PaymentStatus.UNPAID,
+              date: new Date(),
               by: context.session.user._id,
             },
           ],
@@ -212,7 +229,11 @@ const orderResolvers = {
         throw error
       }
     },
-    readyToPayOrder: async (_: any, args: { _id: string }, context: any) => {
+    changeOrderStatus: async (
+      _: any,
+      args: { _id: string; status: OrderStatus },
+      context: any
+    ) => {
       try {
         if (!context.session)
           throw new GraphQLError("Unauthorized", {
@@ -224,14 +245,23 @@ const orderResolvers = {
             extensions: { code: "NOT_FOUND" },
           })
         order.orderStatuses.push({
-          status: OrderStatus.FOR_PAYMENT,
+          status: args.status,
           date: new Date(),
           by: context.session.user._id,
         })
+        if (args.status === OrderStatus.VERIFIED) {
+          order.paymentStatuses.push({
+            status: PaymentStatus.PAID,
+            date: new Date(),
+            by: context.session.user._id,
+          })
+        }
         await order.save()
         return {
           ok: true,
-          message: "Order is now ready for payment",
+          message: `Order is now ${args.status
+            .replaceAll("_", " ")
+            .toLowerCase()}`,
         }
       } catch (error) {
         throw error

@@ -35,7 +35,27 @@ const authResolvers = {
           throw new GraphQLError("User not found", {
             extensions: { code: "NOT_FOUND" },
           })
-        return true
+        return {
+          ok: true,
+          message: "Password changed successfully",
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+    resetPassword: async (_: any, args: { _id: string }) => {
+      try {
+        const user = await User.findById(args._id)
+        if (!user)
+          throw new GraphQLError("User not found", {
+            extensions: { code: "NOT_FOUND" },
+          })
+        user.password = await bcrypt.hash(user.username, 10)
+        await user.save()
+        return {
+          ok: true,
+          message: "Password reset successfully",
+        }
       } catch (error) {
         throw error
       }

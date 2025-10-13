@@ -12,15 +12,20 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
 import { OrderStatus } from "@/types/order.interface"
+import { useSession } from "next-auth/react"
+import { IUser } from "@/types/user.interface"
+import PaymentBadge from "@/components/payment-badge"
+import { Input } from "@/components/ui/input"
+import { TrashIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const ORDERS = gql`
-  query Orders($first: Int!, $filter: [Filter]) {
-    orders(first: $first, filter: $filter) {
+  query Orders($first: Int!, $filter: [Filter], $search: String) {
+    orders(first: $first, filter: $filter, search: $search) {
       total
       pages
       edges {
@@ -31,6 +36,7 @@ const ORDERS = gql`
           amountToBePaid
           dateReceived
           currentStatus
+          paymentStatus
         }
       }
       pageInfo {
@@ -50,12 +56,22 @@ interface Filter {
 const ROWS_INCREMENT = 5
 
 const Page = () => {
+  const { data: session } = useSession()
+  const user: IUser & any = session?.user
+  const role = user?.role as string
   const [rows, setRows] = useState<number>(ROWS_INCREMENT)
-  const [filter, setFilter] = useState<Filter[]>([])
+  const [search, setSearch] = useState<string>("")
+  const [searchKeyword, setSearchKeyword] = useState<string>("")
+  const [filter, setFilter] = useState<Filter[]>(
+    role === "STAFF"
+      ? [{ key: "currentStatus", value: "RECEIVED", type: "TEXT" }]
+      : []
+  )
   const { data, refetch, loading } = useQuery(ORDERS, {
     variables: {
       first: rows,
       filter,
+      search,
     },
     fetchPolicy: "network-only",
   })
@@ -68,6 +84,33 @@ const Page = () => {
   return (
     <div className="flex flex-col p-2 gap-2">
       <div className="w-full flex flex-col gap-2">
+        <div className="flex">
+          <Input
+            placeholder="🔍 Search order... "
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") setSearch(searchKeyword)
+            }}
+            className={cn(
+              (search || searchKeyword) && "rounded-tr-none rounded-br-none",
+              "flex-1 outline-none focus-visible:ring-0"
+            )}
+          />
+          {(search || searchKeyword) && (
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => {
+                setSearch("")
+                setSearchKeyword("")
+              }}
+              className="rounded-tl-none rounded-bl-none"
+            >
+              <TrashIcon />
+            </Button>
+          )}
+        </div>
         <OrderForm refetch={refetch} />
         <Select
           value={
@@ -87,14 +130,11 @@ const Page = () => {
             <SelectGroup>
               <SelectItem value="*">All</SelectItem>
               <SelectItem value={OrderStatus.RECEIVED}>Received</SelectItem>
-              <SelectItem value={OrderStatus.FOR_PAYMENT}>
-                For Payment
+              <SelectItem value={OrderStatus.READY_TO_PAY}>
+                Ready to Pay
               </SelectItem>
-              <SelectItem value={OrderStatus.PARTIALLY_PAID}>
-                Partially Paid
-              </SelectItem>
-              <SelectItem value={OrderStatus.PAID}>Fully Paid</SelectItem>
               <SelectItem value={OrderStatus.RELEASED}>Released</SelectItem>
+              <SelectItem value={OrderStatus.VERIFIED}>Verified</SelectItem>
               <SelectItem value={OrderStatus.CANCELLED}>Cancelled</SelectItem>
             </SelectGroup>
           </SelectContent>
@@ -103,13 +143,15 @@ const Page = () => {
       <div className="flex flex-col gap-2">
         <span className="text-sm text-muted-foreground text-center">
           {loading ? (
-            "Searching..."
+            "Loading..."
           ) : (
             <span>
               Showing {orderRows.length} results for{" "}
               <span className="font-medium capitalize">
                 {filter.length
-                  ? (filter[0]?.value as string).replace("_", " ").toLowerCase()
+                  ? (filter[0]?.value as string)
+                      .replaceAll("_", " ")
+                      .toLowerCase()
                   : "all"}
               </span>
             </span>
@@ -130,9 +172,12 @@ const Page = () => {
                   }).format(o.node.amountToBePaid)}
                 </span>
                 <span className="block text-sm">
-                  Date: {format(new Date(o.node.dateReceived), "MMM d, yyyy")}
+                  Date: {format(new Date(o.node.dateReceived), "Ppp")}
                 </span>
-                <StatusBadge status={o.node.currentStatus} />
+                <div className="flex gap-1">
+                  <StatusBadge status={o.node.currentStatus} />
+                  <PaymentBadge status={o.node.paymentStatus} />
+                </div>
               </div>
             </div>
           </ViewOrder>

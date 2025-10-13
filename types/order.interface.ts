@@ -4,15 +4,26 @@ import { IUser } from "./user.interface"
 
 export enum OrderStatus {
   RECEIVED = "RECEIVED",
-  FOR_PAYMENT = "FOR_PAYMENT",
+  READY_TO_PAY = "READY_TO_PAY",
+  RELEASED = "RELEASED",
+  VERIFIED = "VERIFIED",
+  CANCELLED = "CANCELLED",
+}
+
+export enum PaymentStatus {
+  UNPAID = "UNPAID",
   PARTIALLY_PAID = "PARTIALLY_PAID",
   PAID = "PAID",
-  RELEASED = "RELEASED",
-  CANCELLED = "CANCELLED",
 }
 
 export interface IOrderStatusItem {
   status: OrderStatus
+  date: Date
+  by: IUser
+}
+
+export interface IPaymentStatusItem {
+  status: PaymentStatus
   date: Date
   by: IUser
 }
@@ -23,6 +34,7 @@ export interface IOrder extends Document {
   orderSlipURL: string
   amountToBePaid: number
   orderStatuses: IOrderStatusItem[]
+  paymentStatuses: IPaymentStatusItem[]
 }
 
 export interface IOrderStatusInput {

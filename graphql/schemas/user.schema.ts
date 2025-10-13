@@ -4,7 +4,7 @@ export default gql`
   enum Role {
     ADMIN
     STAFF
-    CANTEEN
+    CASHIER
   }
 
   type User {

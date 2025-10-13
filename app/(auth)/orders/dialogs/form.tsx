@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
   SheetClose,
@@ -20,13 +21,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { IOrder } from "@/types/order.interface"
 import { gql } from "@apollo/client"
-import { useMutation } from "@apollo/client/react"
+import { useMutation, useQuery } from "@apollo/client/react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CirclePlus } from "lucide-react"
 import Image from "next/image"
-import React, { useRef, useState, useTransition } from "react"
+import React, { useEffect, useRef, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 import z from "zod"
 
 const CREATE_ORDER = gql`
@@ -34,6 +37,30 @@ const CREATE_ORDER = gql`
     createOrder(input: $input) {
       ok
       message
+    }
+  }
+`
+
+const UPDATE_ORDER = gql`
+  mutation UpdateOrder($input: UpdateOrderInput!) {
+    updateOrder(input: $input) {
+      ok
+      message
+    }
+  }
+`
+
+const ORDER = gql`
+  query Order($_id: ID!) {
+    order(_id: $_id) {
+      _id
+      customerName
+      orderSlipURL
+      amountToBePaid
+      orderStatuses {
+        status
+        date
+      }
     }
   }
 `
@@ -46,20 +73,49 @@ const OrderSchema = z.object({
   dateReceived: z.date("Invalid date"),
 })
 
-const OrderForm = ({ refetch }: { refetch?: () => void }) => {
+const DEFAULT_VALUES = {
+  customerName: "",
+  amountToBePaid: 0,
+  dateReceived: new Date(),
+}
+
+const OrderForm = ({
+  _id,
+  refetch,
+  onCloseParent,
+}: {
+  _id?: string
+  refetch?: () => void
+  onCloseParent?: () => void
+}) => {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const imageRef = useRef<HTMLInputElement>(null)
   const form = useForm<z.infer<typeof OrderSchema>>({
     resolver: zodResolver(OrderSchema),
-    defaultValues: {
-      customerName: "",
-      amountToBePaid: 0,
-      dateReceived: new Date(),
-    },
+    defaultValues: DEFAULT_VALUES,
   })
-  const [submit] = useMutation(CREATE_ORDER)
+  const [submit] = useMutation(_id ? UPDATE_ORDER : CREATE_ORDER)
+  const { data } = useQuery(ORDER, {
+    skip: !_id || !open,
+    variables: { _id },
+  })
+  const order = (data as any)?.order as IOrder
+
+  useEffect(() => {
+    if (open) {
+      if (_id) {
+        form.reset({
+          customerName: order?.customerName || "",
+          amountToBePaid: order?.amountToBePaid || 0,
+          dateReceived: order?.orderStatuses?.[0]?.date
+            ? new Date(order.orderStatuses[0].date)
+            : new Date(),
+        })
+      } else form.reset(DEFAULT_VALUES)
+    }
+  }, [open, form, data, _id, order])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -77,11 +133,11 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
   }
 
   const onUpload = async () => {
-    if (!imageFile) return
+    if (!imageFile) return null
     try {
       const formData = new FormData()
-      formData.append("image", imageFile, imageFile.name) // Add file name
-      const response = await fetch("/api/upload", {
+      formData.append("image", imageFile, imageFile.name)
+      const response = await fetch("/api/upload/order", {
         method: "POST",
         body: formData,
       })
@@ -92,35 +148,62 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
     }
   }
 
+  const onClose = () => {
+    form.reset(DEFAULT_VALUES)
+    form.clearErrors()
+    setImageFile(null)
+    if (imageRef.current) imageRef.current.value = ""
+    setOpen(false)
+    refetch?.()
+    onCloseParent?.()
+  }
+
   const onSubmit = (data: z.infer<typeof OrderSchema>) =>
     startTransition(async () => {
-      const response = await onUpload()
-      if (response?.url) {
-        const res = await submit({
+      try {
+        const uploadResponse = await onUpload()
+        const { dateReceived, ...rest } = data
+        const response = await submit({
           variables: {
             input: {
-              ...data,
-              orderSlipURL: response.url,
+              ...(_id ? { _id, ...rest } : data),
+              ...(order?.orderSlipURL
+                ? { orderSlipURL: order?.orderSlipURL }
+                : uploadResponse.url
+                ? { orderSlipURL: uploadResponse.url }
+                : {}),
             },
           },
         })
-        if (res) {
-          form.reset()
-          setImageFile(null)
-          setOpen(false)
-          refetch?.()
+        if (response) {
+          onClose()
+          const message = (response.data as any)?.createOrder?.message
+          if (message) toast.success(message)
         }
+      } catch (error) {
+        console.error(error)
       }
     })
 
   return (
     <Sheet open={open} onOpenChange={setOpen} modal>
       <SheetTrigger asChild>
-        <Button className="w-full">
-          <CirclePlus /> New Job Order
-        </Button>
+        {_id ? (
+          <Button variant="outline" className="w-full">
+            Edit
+          </Button>
+        ) : (
+          <Button className="w-full">
+            <CirclePlus /> New Job Order
+          </Button>
+        )}
       </SheetTrigger>
-      <SheetContent side="left" className="min-w-full" showCloseButton={false}>
+      <SheetContent
+        side="left"
+        className="min-w-full"
+        showCloseButton={false}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -164,6 +247,7 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
                         onChange={(e) =>
                           field.onChange(parseFloat(e.target.value))
                         }
+                        value={+field.value}
                         disabled={isPending}
                       />
                     </FormControl>
@@ -207,15 +291,44 @@ const OrderForm = ({ refetch }: { refetch?: () => void }) => {
                   disabled={isPending}
                   capture="environment"
                 />
+                {_id && (
+                  <span className="text-sm text-muted-foreground">
+                    Leave this blank to keep current.
+                  </span>
+                )}
                 {imageFile && (
-                  <div className="flex flex-col gap-2 bg-slate-300 p-2">
-                    <Image
-                      src={URL.createObjectURL(imageFile)}
-                      alt="Preview"
-                      width={128}
-                      height={128}
-                      className="w-full max-h-96 object-contain"
-                    />
+                  <div className="flex flex-col gap-2">
+                    {_id && (
+                      <>
+                        <Separator />
+                        <Label>New Order Slip</Label>
+                      </>
+                    )}
+
+                    <div className="flex flex-col gap-2 bg-slate-300 p-2">
+                      <Image
+                        src={URL.createObjectURL(imageFile)}
+                        alt="Preview"
+                        width={128}
+                        height={128}
+                        className="w-full max-h-96 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+                {order?.orderSlipURL && (
+                  <div className="flex flex-col gap-2">
+                    <Separator />
+                    <Label>Current Order Slip</Label>
+                    <div className="flex flex-col gap-2 bg-slate-300 p-2">
+                      <Image
+                        src={order.orderSlipURL}
+                        alt="Preview"
+                        width={128}
+                        height={128}
+                        className="w-full max-h-96 object-contain"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

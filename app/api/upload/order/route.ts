@@ -22,13 +22,10 @@ export async function POST(request: Request) {
     })
 
     const drive = google.drive({ version: "v3", auth })
-
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!
-
     const response = await drive.files.create({
       requestBody: {
         name: new Date().toISOString().replace(/[:.]/g, "-"),
-        parents: [folderId],
+        parents: [process.env.GOOGLE_DRIVE_ORDER_FOLDER!],
       },
       media: {
         mimeType: file.type,
@@ -40,7 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "✅ File uploaded successfully",
+        message: "Job order slip uploaded successfully!",
         url: `https://drive.google.com/uc?export=view&id=${response.data.id}`,
       },
       { status: 200 }

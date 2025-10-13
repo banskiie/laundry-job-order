@@ -18,7 +18,6 @@ import { useMutation, useQuery } from "@apollo/client/react"
 import Image from "next/image"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -29,6 +28,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { OrderStatus } from "@/types/order.interface"
 import { useState } from "react"
+import PaymentBadge from "@/components/payment-badge"
+import UploadPaymentForm from "./upload-payment"
+import { toast } from "sonner"
+import { useSession } from "next-auth/react"
+import { IUser } from "@/types/user.interface"
+import OrderForm from "./form"
 
 const ORDER = gql`
   query Order($_id: ID!) {
@@ -44,15 +49,22 @@ const ORDER = gql`
           name
         }
       }
+      paymentStatuses {
+        status
+        date
+        by {
+          name
+        }
+      }
       createdAt
       updatedAt
     }
   }
 `
 
-const READY_TO_PAY = gql`
-  mutation ReadyToPayOrder($_id: ID!) {
-    readyToPayOrder(_id: $_id) {
+const CHANGE_ORDER_STATUS = gql`
+  mutation ChangeOrderStatus($_id: ID!, $status: OrderStatus!) {
+    changeOrderStatus(_id: $_id, status: $status) {
       ok
       message
     }
@@ -66,18 +78,78 @@ const ReadyToPayWarning = ({
   _id?: string
   onClose: () => void
 }) => {
-  const [openReadyToPay, setOpenReadyToPay] = useState<boolean>(false)
-  const [readyToPayOrder, { data, loading }] = useMutation(READY_TO_PAY)
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [changeOrderStatus, { loading }] = useMutation(CHANGE_ORDER_STATUS, {
+    variables: { _id, status: OrderStatus.READY_TO_PAY },
+  })
 
   const onCompleted = () => {
-    setOpenReadyToPay(false)
+    setOpenWarning(false)
     onClose()
   }
 
   return (
-    <AlertDialog open={openReadyToPay} onOpenChange={setOpenReadyToPay}>
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive">Ready to Pay</Button>
+        <Button className="bg-yellow-600 hover:bg-yellow-600/90">
+          Ready to Pay
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You will set this order as{" "}
+            <span className="font-medium text-yellow-600 underline">
+              ready for payment
+            </span>{" "}
+            and be sent to the cashier.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            className="bg-yellow-600 hover:bg-yellow-600/90"
+            loading={loading}
+            onClick={async () =>
+              await changeOrderStatus().then((data: any) => {
+                const message = data.data?.changeOrderStatus?.message
+                if (message) toast.success(message)
+                onCompleted()
+              })
+            }
+          >
+            Yes, ready to pay
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+const CancelWarning = ({
+  _id,
+  onClose,
+}: {
+  _id?: string
+  onClose: () => void
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [changeOrderStatus, { loading }] = useMutation(CHANGE_ORDER_STATUS, {
+    variables: { _id, status: OrderStatus.CANCELLED },
+  })
+
+  const onCompleted = () => {
+    setOpenWarning(false)
+    onClose()
+  }
+
+  return (
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive">Cancel Order</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -91,17 +163,133 @@ const ReadyToPayWarning = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCompleted}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
           <Button
             variant="destructive"
             loading={loading}
             onClick={async () =>
-              await readyToPayOrder({ variables: { _id } }).then(() =>
+              await changeOrderStatus().then((data: any) => {
+                const message = data.data?.changeOrderStatus?.message
+                if (message) toast.success(message)
                 onCompleted()
-              )
+              })
             }
           >
-            Submit
+            Yes, cancel
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+const ReleaseWarning = ({
+  _id,
+  onClose,
+}: {
+  _id?: string
+  onClose: () => void
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [changeOrderStatus, { loading }] = useMutation(CHANGE_ORDER_STATUS, {
+    variables: { _id, status: OrderStatus.RELEASED },
+  })
+
+  const onCompleted = () => {
+    setOpenWarning(false)
+    onClose()
+  }
+
+  return (
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
+      <AlertDialogTrigger asChild>
+        <Button className="bg-green-800 hover:bg-green-800">Release</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You will{" "}
+            <span className="font-medium text-green-800 underline">
+              release
+            </span>{" "}
+            the laundry back to the customer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            className="bg-green-800 hover:bg-green-800/90"
+            loading={loading}
+            onClick={async () =>
+              await changeOrderStatus().then((data: any) => {
+                const message = data.data?.changeOrderStatus?.message
+                if (message) toast.success(message)
+                onCompleted()
+              })
+            }
+          >
+            Yes, release
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+const VerifyWarning = ({
+  _id,
+  onClose,
+}: {
+  _id?: string
+  onClose: () => void
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [changeOrderStatus, { loading }] = useMutation(CHANGE_ORDER_STATUS, {
+    variables: { _id, status: OrderStatus.VERIFIED },
+  })
+
+  const onCompleted = () => {
+    setOpenWarning(false)
+    onClose()
+  }
+
+  return (
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
+      <AlertDialogTrigger asChild>
+        <Button className="bg-blue-800 hover:bg-blue-800/90">Verify</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You will set this order as{" "}
+            <span className="font-medium text-blue-800 underline">
+              verified and fully paid
+            </span>
+            .
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            className="bg-blue-800 hover:bg-blue-800/90"
+            loading={loading}
+            onClick={async () =>
+              await changeOrderStatus().then((data: any) => {
+                const message = data.data?.changeOrderStatus?.message
+                if (message) toast.success(message)
+                onCompleted()
+              })
+            }
+          >
+            Yes, verify
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -118,10 +306,41 @@ const ViewOrder = ({
   _id?: string
   refetch: () => void
 }>) => {
+  const { data: sessionData } = useSession()
+  const isAdmin = (sessionData?.user as IUser)?.role === "ADMIN"
   const [openView, setOpenView] = useState<boolean>(false)
-  const { data, loading } = useQuery(ORDER, { skip: !_id, variables: { _id } })
+  const {
+    data,
+    loading,
+    refetch: refreshData,
+  } = useQuery(ORDER, {
+    skip: !_id,
+    variables: { _id },
+    fetchPolicy: "network-only",
+  })
+
+  const latestOrderStatus = (data as any)?.order?.orderStatuses[
+    (data as any)?.order?.orderStatuses.length - 1
+  ]?.status
+
+  const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
+  const showReadyToPay = latestOrderStatus === OrderStatus.RECEIVED
+  const showCancel = latestOrderStatus === OrderStatus.RECEIVED
+  const showRelease = latestOrderStatus === OrderStatus.READY_TO_PAY
+  const showUpload =
+    latestOrderStatus === OrderStatus.RELEASED ||
+    latestOrderStatus === OrderStatus.READY_TO_PAY
+  const showVerify = latestOrderStatus === OrderStatus.RELEASED
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpenView(isOpen)
+    if (isOpen && _id) {
+      refreshData()
+    }
+  }
+
   const order = (data as any)?.order
-  if (loading) return <Skeleton className="h-25.5 w-full rounded-none" />
+  if (loading) return <Skeleton className="h-[100px] w-full rounded-none" />
 
   const onClose = () => {
     setOpenView(false)
@@ -129,7 +348,7 @@ const ViewOrder = ({
   }
 
   return (
-    <Sheet open={openView} onOpenChange={setOpenView} modal>
+    <Sheet open={openView} onOpenChange={handleOpenChange} modal>
       <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent
         onOpenAutoFocus={(e) => e.preventDefault()}
@@ -144,7 +363,7 @@ const ViewOrder = ({
               View the details of the job order below.
             </SheetDescription>
           </SheetHeader>
-          <div className="px-4 pb-2 flex flex-col gap-2.5 flex-1 overflow-y-auto max-h-[100%]">
+          <div className="px-4 pb-2 grid grid-cols-2 gap-2.5 items-start place-content-start flex-1 overflow-y-auto max-h-[100%]">
             <div className="grid gap-1">
               <Label>Current Status</Label>
               <StatusBadge
@@ -154,10 +373,19 @@ const ViewOrder = ({
               />
             </div>
             <div className="grid gap-1">
+              <Label>Payment Status</Label>
+              <PaymentBadge
+                status={
+                  order?.paymentStatuses[order?.paymentStatuses.length - 1]
+                    ?.status
+                }
+              />
+            </div>
+            <div className="grid gap-1 col-span-2">
               <Label>Customer Name</Label>
               <span>{order?.customerName}</span>
             </div>
-            <div className="grid gap-1">
+            <div className="grid gap-1 col-span-2">
               <Label>Amount </Label>
               <span>
                 {new Intl.NumberFormat("en-US", {
@@ -166,7 +394,7 @@ const ViewOrder = ({
                 }).format(order?.amountToBePaid)}
               </span>
             </div>
-            <div className="grid gap-1">
+            <div className="grid gap-1 col-span-2">
               <Label>Job Order Slip</Label>
               <Image
                 src={order?.orderSlipURL}
@@ -174,14 +402,25 @@ const ViewOrder = ({
                 width={500}
                 height={500}
                 className="w-full max-w-md h-auto object-contain"
+                priority
+                fetchPriority="high"
+                loading="eager"
               />
             </div>
           </div>
           <SheetFooter>
-            {order?.orderStatuses[order?.orderStatuses.length - 1]?.status ===
-              OrderStatus.RECEIVED && (
+            {showEdit && <OrderForm _id={order?._id} onCloseParent={onClose} />}
+            {showReadyToPay && (
               <ReadyToPayWarning _id={order?._id} onClose={onClose} />
             )}
+            {showCancel && <CancelWarning _id={order?._id} onClose={onClose} />}
+            {showUpload && (
+              <UploadPaymentForm _id={order?._id} refetch={refetch} />
+            )}
+            {showRelease && (
+              <ReleaseWarning _id={order?._id} onClose={onClose} />
+            )}
+            {showVerify && <VerifyWarning _id={order?._id} onClose={onClose} />}
             <SheetClose asChild>
               <Button variant="outline" onClick={onClose}>
                 Close

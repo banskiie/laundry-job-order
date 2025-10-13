@@ -3,15 +3,26 @@ import { gql } from "graphql-tag"
 export default gql`
   enum OrderStatus {
     RECEIVED
-    FOR_PAYMENT
+    READY_TO_PAY
+    RELEASED
+    VERIFIED
+    CANCELLED
+  }
+
+  enum PaymentStatus {
+    UNPAID
     PARTIALLY_PAID
     PAID
-    RELEASED
-    CANCELLED
   }
 
   type OrderStatusItem {
     status: OrderStatus!
+    date: DateTime!
+    by: User!
+  }
+
+  type PaymentStatusItem {
+    status: PaymentStatus!
     date: DateTime!
     by: User!
   }
@@ -22,6 +33,7 @@ export default gql`
     orderSlipURL: String!
     amountToBePaid: Float!
     orderStatuses: [OrderStatusItem!]!
+    paymentStatuses: [PaymentStatusItem!]!
     createdAt: DateTime!
     updatedAt: DateTime!
   }
@@ -39,6 +51,7 @@ export default gql`
     amountToBePaid: Float!
     dateReceived: DateTime!
     currentStatus: OrderStatus!
+    paymentStatus: PaymentStatus!
   }
 
   type OrderEdge {
@@ -75,6 +88,6 @@ export default gql`
     createOrder(input: CreateOrderInput!): Response!
     updateOrder(input: UpdateOrderInput!): Response!
     deleteOrder(_id: ID!): Response!
-    readyToPayOrder(_id: ID!): Response!
+    changeOrderStatus(_id: ID!, status: OrderStatus!): Response!
   }
 `
