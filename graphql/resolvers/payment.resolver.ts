@@ -180,7 +180,7 @@ const paymentResolvers = {
         const currentOrder = await Order.findById(args.input.order)
         await pusherServer.trigger("tables", "refresh-table", {
           ok: true,
-          message: `New payment of $${args.input.amountPaid} uploaded for ${currentOrder?.customerName}`,
+          message: `New payment of ₱${args.input.amountPaid} uploaded for ${currentOrder?.customerName}`,
         })
         if (!currentOrder)
           throw new GraphQLError("Order not found", {
