@@ -9,6 +9,7 @@ import {
   PaymentStatus,
   type IOrderInput,
 } from "@/types/order.interface"
+import { pusherServer } from "@/lib/pusher"
 
 const orderResolvers = {
   Query: {
@@ -168,6 +169,12 @@ const orderResolvers = {
             extensions: { code: "UNAUTHORIZED" },
           })
         const { dateReceived, ...rest } = args.input
+
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: "New order created for " + args.input.customerName,
+        })
+
         await Order.create({
           ...rest,
           orderStatuses: [
@@ -202,6 +209,10 @@ const orderResolvers = {
             new: true,
           }
         )
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: "Order updated for " + args.input.customerName,
+        })
         if (!order)
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
@@ -244,18 +255,24 @@ const orderResolvers = {
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
           })
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `Order from ${order.customerName} is now ${args.status
+            .replaceAll("_", " ")
+            .toLowerCase()}`,
+        })
         order.orderStatuses.push({
           status: args.status,
           date: new Date(),
           by: context.session.user._id,
         })
-        if (args.status === OrderStatus.VERIFIED) {
+        if (args.status === OrderStatus.VERIFIED)
           order.paymentStatuses.push({
             status: PaymentStatus.PAID,
             date: new Date(),
             by: context.session.user._id,
           })
-        }
+
         await order.save()
         return {
           ok: true,

@@ -17,6 +17,7 @@ export interface IPayment extends Document {
   proofOfPaymentURL?: string
   paymentMethod: PaymentMethod
   amountPaid: number
+  isFullyPaid?: boolean
   datePaid: Date
 }
 

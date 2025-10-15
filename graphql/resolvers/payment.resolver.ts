@@ -7,6 +7,7 @@ import type { IDataTableInput } from "@/types/shared.interface"
 import { type IPaymentInput } from "@/types/payment.interface"
 import Order from "@/models/order.model"
 import { OrderStatus, PaymentStatus } from "@/types/order.interface"
+import { pusherServer } from "@/lib/pusher"
 
 const paymentResolvers = {
   Query: {
@@ -177,6 +178,10 @@ const paymentResolvers = {
         const { isFullyPaid, ...rest } = args.input
         await Payment.create(rest)
         const currentOrder = await Order.findById(args.input.order)
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `New payment of $${args.input.amountPaid} uploaded for ${currentOrder?.customerName}`,
+        })
         if (!currentOrder)
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
@@ -217,6 +222,10 @@ const paymentResolvers = {
             new: true,
           }
         )
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `Payment updated for ${payment?.customerName}`,
+        })
         if (!payment)
           throw new GraphQLError("Payment not found", {
             extensions: { code: "NOT_FOUND" },

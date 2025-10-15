@@ -10,6 +10,8 @@ import { IUser } from "@/types/user.interface"
 import { Input } from "@/components/ui/input"
 import { TrashIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { pusherClient } from "@/lib/pusher"
+import { toast } from "sonner"
 
 const PAYMENTS = gql`
   query Payments($first: Int!, $search: String) {
@@ -45,11 +47,9 @@ const ROWS_INCREMENT = 5
 const Page = () => {
   const { data: session } = useSession()
   const user: IUser & any = session?.user
-  const role = user?.role as string
   const [rows, setRows] = useState<number>(ROWS_INCREMENT)
   const [search, setSearch] = useState<string>("")
   const [searchKeyword, setSearchKeyword] = useState<string>("")
-
   const { data, refetch, loading } = useQuery(PAYMENTS, {
     variables: {
       first: rows,
@@ -58,6 +58,18 @@ const Page = () => {
     fetchPolicy: "network-only",
   })
   const [paymentRows, setPaymentRows] = useState<any>([])
+
+  useEffect(() => {
+    const channel = pusherClient.subscribe("tables")
+    channel.bind("refresh-table", (d: any) => {
+      refetch()
+      toast.success(d.message)
+    })
+    return () => {
+      channel.unbind_all()
+      channel.unsubscribe()
+    }
+  }, [refetch])
 
   useEffect(() => {
     if (data) setPaymentRows((data as any).payments.edges)

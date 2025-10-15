@@ -15,6 +15,9 @@ import { gql } from "@apollo/client"
 import { useQuery } from "@apollo/client/react"
 import Image from "next/image"
 import { useState } from "react"
+import UploadPaymentForm from "./form"
+import { useSession } from "next-auth/react"
+import { IUser } from "@/types/user.interface"
 
 const PAYMENT = gql`
   query Payment($_id: ID!) {
@@ -40,6 +43,9 @@ const ViewPayment = ({
   _id?: string
   refetch: () => void
 }>) => {
+  const { data: sessionData } = useSession()
+  const isAdmin = (sessionData?.user as IUser)?.role === "ADMIN"
+  const isCashier = (sessionData?.user as IUser)?.role === "CASHIER"
   const [openView, setOpenView] = useState<boolean>(false)
   const {
     data,
@@ -50,6 +56,8 @@ const ViewPayment = ({
     variables: { _id },
     fetchPolicy: "network-only",
   })
+
+  const showEdit = isAdmin || isCashier
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpenView(isOpen)
@@ -117,6 +125,9 @@ const ViewPayment = ({
             </div>
           </div>
           <SheetFooter>
+            {showEdit && (
+              <UploadPaymentForm _id={payment?._id} onCloseParent={onClose} />
+            )}
             <SheetClose asChild>
               <Button variant="outline" onClick={onClose}>
                 Close

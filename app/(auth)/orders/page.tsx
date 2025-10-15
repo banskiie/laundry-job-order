@@ -22,6 +22,8 @@ import PaymentBadge from "@/components/payment-badge"
 import { Input } from "@/components/ui/input"
 import { TrashIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { pusherClient } from "@/lib/pusher"
+import { toast } from "sonner"
 
 const ORDERS = gql`
   query Orders($first: Int!, $filter: [Filter], $search: String) {
@@ -80,6 +82,18 @@ const Page = () => {
   useEffect(() => {
     if (data) setOrderRows((data as any).orders.edges)
   }, [data])
+
+  useEffect(() => {
+    const channel = pusherClient.subscribe("tables")
+    channel.bind("refresh-table", (d: any) => {
+      refetch()
+      toast.success(d.message)
+    })
+    return () => {
+      channel.unbind_all()
+      channel.unsubscribe()
+    }
+  }, [refetch])
 
   return (
     <div className="flex flex-col p-2 gap-2">
