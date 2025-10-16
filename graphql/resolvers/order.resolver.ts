@@ -40,6 +40,7 @@ const orderResolvers = {
           matchStage.$or = [
             { customerName: { $regex: search, $options: "i" } },
             { amountToBePaid: Number(search) },
+            { orderNumber: { $regex: search, $options: "i" } },
           ]
 
         // Handle filters
@@ -109,6 +110,7 @@ const orderResolvers = {
           { $limit: first + 1 },
           {
             $project: {
+              orderNumber: 1,
               customerName: 1,
               amountToBePaid: 1,
               dateReceived: 1,

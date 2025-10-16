@@ -176,12 +176,26 @@ const paymentResolvers = {
             extensions: { code: "UNAUTHORIZED" },
           })
         const { isFullyPaid, ...rest } = args.input
-        await Payment.create(rest)
         const currentOrder = await Order.findById(args.input.order)
-        await pusherServer.trigger("tables", "refresh-table", {
-          ok: true,
-          message: `New payment of ₱${args.input.amountPaid} uploaded for ${currentOrder?.customerName}`,
-        })
+
+        const [{ totalPaid } = { totalPaid: 0 }] = await Payment.aggregate([
+          {
+            $match: { order: new Types.ObjectId(currentOrder._id) },
+          },
+          {
+            $group: {
+              _id: "$order",
+              totalPaid: { $sum: "$amountPaid" },
+            },
+          },
+          {
+            $project: {
+              totalPaid: 1,
+              _id: 0,
+            },
+          },
+        ])
+
         if (!currentOrder)
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
@@ -205,6 +219,25 @@ const paymentResolvers = {
           })
         }
         await currentOrder.save()
+        // If fully paid, set amountPaid to the remaining balance
+        const amountPaid =
+          currentOrder.amountToBePaid > totalPaid
+            ? currentOrder.amountToBePaid - totalPaid
+            : 0
+        await Payment.create(
+          isFullyPaid
+            ? {
+                ...rest,
+                amountPaid,
+              }
+            : rest
+        )
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `New payment of ₱${amountPaid} uploaded for ${
+            currentOrder?.customerName
+          } ${isFullyPaid ? "(Fully paid)" : ""}`,
+        })
         return {
           ok: true,
           message: "Payment uploaded successfully",

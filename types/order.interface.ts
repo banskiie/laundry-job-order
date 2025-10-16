@@ -30,6 +30,7 @@ export interface IPaymentStatusItem {
 
 export interface IOrder extends Document {
   _id: ObjectId
+  orderNumber: string
   customerName: string
   orderSlipURL: string
   amountToBePaid: number
@@ -45,6 +46,7 @@ export interface IOrderStatusInput {
 
 export interface IOrderInput extends Request {
   _id: ObjectId
+  orderNumber: string
   customerName: string
   orderSlipURL: string
   amountToBePaid: number
@@ -54,6 +56,7 @@ export interface IOrderInput extends Request {
 
 export interface IOrderNode {
   _id: ObjectId
+  orderNumber: string
   customerName: string
   amountToBePaid: number
   dateReceived: Date

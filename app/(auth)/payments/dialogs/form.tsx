@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,26 +31,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils"
 import { IPayment, PaymentMethod } from "@/types/payment.interface"
 import { gql } from "@apollo/client"
 import { useMutation, useQuery } from "@apollo/client/react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
-import { Upload } from "lucide-react"
 import Image from "next/image"
 import React, { useEffect, useRef, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import z from "zod"
-
-const UPLOAD_PAYMENT = gql`
-  mutation UploadPayment($input: UploadPaymentInput!) {
-    uploadPayment(input: $input) {
-      ok
-      message
-    }
-  }
-`
 
 const UPDATE_PAYMENT = gql`
   mutation UpdatePayment($input: UpdatePaymentInput!) {
@@ -80,17 +72,17 @@ const UploadPaymentSchema = z.object({
     .number("Amount must be a number")
     .min(1, "Amount must be at least 1"),
   datePaid: z.date("Invalid date"),
-  isFullyPaid: z.boolean().optional(),
+  proofOfPaymentURL: z.union([z.string().url(), z.literal("")]),
 })
 
 const DEFAULT_VALUES = {
   paymentMethod: PaymentMethod.CASH,
-  amountPaid: 1,
+  amountPaid: 0,
   datePaid: new Date(),
-  isFullyPaid: false,
+  proofOfPaymentURL: "",
 }
 
-const UploadPaymentForm = ({
+const UpdatePaymentForm = ({
   _id,
   refetch,
   onCloseParent,
@@ -107,7 +99,7 @@ const UploadPaymentForm = ({
     resolver: zodResolver(UploadPaymentSchema),
     defaultValues: DEFAULT_VALUES,
   })
-  const [submit] = useMutation(_id ? UPDATE_PAYMENT : UPLOAD_PAYMENT)
+  const [submit] = useMutation(UPDATE_PAYMENT)
   const { data } = useQuery(PAYMENT, {
     skip: !_id || !open,
     variables: { _id },
@@ -123,11 +115,11 @@ const UploadPaymentForm = ({
           datePaid: payment?.datePaid
             ? new Date(payment?.datePaid)
             : new Date(),
-          isFullyPaid: payment?.isFullyPaid || false,
+          proofOfPaymentURL: payment?.proofOfPaymentURL || "",
         })
       } else form.reset(DEFAULT_VALUES)
     }
-  }, [open, form, data, _id, payment])
+  }, [open, form, _id, payment])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -142,6 +134,7 @@ const UploadPaymentForm = ({
       }
       setImageFile(selectedFile)
     }
+    form.clearErrors("proofOfPaymentURL")
   }
 
   const onClose = () => {
@@ -174,21 +167,32 @@ const UploadPaymentForm = ({
     startTransition(async () => {
       try {
         const uploadResponse = await onUpload()
-        const response = await submit({
+        if (
+          data.paymentMethod !== PaymentMethod.SALARY_DEDUCTION &&
+          !uploadResponse?.url &&
+          !data?.proofOfPaymentURL
+        ) {
+          form.setError("proofOfPaymentURL", {
+            type: "manual",
+            message: "Proof of payment is required for non-salary deduction.",
+          })
+          return
+        }
+        const res = await submit({
           variables: {
             input: {
-              ...(_id ? { _id, ...data } : data),
-              ...(payment?.proofOfPaymentURL
-                ? { proofOfPaymentURL: payment?.proofOfPaymentURL }
-                : uploadResponse.url
+              ...data,
+              ...(uploadResponse?.url
                 ? { proofOfPaymentURL: uploadResponse.url }
                 : {}),
+              _id: payment?._id,
+              order: payment?.order?._id,
             },
           },
         })
-        if (response) {
+        if (res) {
           onClose()
-          const message = (response.data as any)?.createOrder?.message
+          const message = (res.data as any)?.uploadPayment?.message
           if (message) toast.success(message)
         }
       } catch (error) {
@@ -222,8 +226,17 @@ const UploadPaymentForm = ({
                     <FormLabel>Payment Method</FormLabel>
                     <FormControl>
                       <Select
+                        disabled={isPending}
                         value={Boolean(field.value) ? field.value : undefined}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          if (value === PaymentMethod.SALARY_DEDUCTION) {
+                            form.setValue("proofOfPaymentURL", "")
+                            form.clearErrors("proofOfPaymentURL")
+                            if (imageRef.current) imageRef.current.value = ""
+                            setImageFile(null)
+                          }
+                        }}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select status" />
@@ -272,108 +285,104 @@ const UploadPaymentForm = ({
                   <FormItem>
                     <FormLabel>Date Paid</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Date Paid"
-                        type="datetime-local"
-                        value={
-                          field.value
-                            ? format(
-                                new Date(field.value),
-                                "yyyy-MM-dd'T'HH:mm"
-                              )
-                            : format(new Date(), "yyyy-MM-dd'T'HH:mm")
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
-                        }
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="isFullyPaid"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="flex items-center gap-3 border p-2 rounded-lg">
-                        <Checkbox
-                          id="fully-paid"
-                          checked={field.value}
-                          onCheckedChange={(checked: boolean) =>
-                            field.onChange(checked)
+                      <div className="flex gap-1">
+                        <Input
+                          {...field}
+                          placeholder="Date Paid"
+                          type="datetime-local"
+                          value={
+                            field.value
+                              ? format(
+                                  new Date(field.value),
+                                  "yyyy-MM-dd'T'HH:mm"
+                                )
+                              : format(new Date(), "yyyy-MM-dd'T'HH:mm")
                           }
-                          className="size-4.5"
+                          onChange={(e) =>
+                            field.onChange(new Date(e.target.value))
+                          }
+                          disabled={isPending}
                         />
-                        <div className="grid gap-1 leading-none">
-                          <FormLabel htmlFor="fully-paid">
-                            Is this fully paid?
-                          </FormLabel>
-                          <p className="text-muted-foreground text-sm">
-                            Checking this will verify the order.
-                          </p>
-                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => field.onChange(new Date())}
+                          disabled={isPending}
+                        >
+                          Now
+                        </Button>
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="flex flex-col gap-2">
-                <Label>Proof of Payment Slip</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  ref={imageRef}
-                  onChange={handleImageChange}
-                  disabled={isPending}
-                  capture="environment"
-                />
-                {_id && (
-                  <span className="text-sm text-muted-foreground">
-                    Upload new proof of payment slip to replace the current one.
-                  </span>
-                )}
-                {imageFile && (
-                  <div className="flex flex-col gap-2">
-                    {_id && (
-                      <>
-                        <Separator />
-                        <Label>New Proof of Payment Slip</Label>
-                      </>
-                    )}
+              {form.watch("paymentMethod") !==
+                PaymentMethod.SALARY_DEDUCTION && (
+                <div className="flex flex-col gap-2">
+                  <Label>Proof of Payment Slip</Label>
+                  <Input
+                    type="file"
+                    accept="image/jpeg, image/png"
+                    ref={imageRef}
+                    onChange={handleImageChange}
+                    disabled={isPending}
+                    capture="environment"
+                    className={cn({
+                      "border-destructive":
+                        !!form.formState.errors.proofOfPaymentURL,
+                    })}
+                  />
+                  {_id && (
+                    <span className="text-sm text-muted-foreground">
+                      Upload new proof of payment slip to replace the current
+                      one.
+                    </span>
+                  )}
+                  <FormDescription>
+                    (Max size: 5 MB, Accepted formats: JPG, PNG).
+                  </FormDescription>
+                  {form.formState.errors.proofOfPaymentURL && (
+                    <p className="text-sm text-red-600">
+                      {form.formState.errors.proofOfPaymentURL.message}
+                    </p>
+                  )}
+                  {imageFile && (
+                    <div className="flex flex-col gap-2">
+                      {_id && (
+                        <>
+                          <Separator />
+                          <Label>New Proof of Payment Slip</Label>
+                        </>
+                      )}
 
-                    <div className="flex flex-col gap-2 bg-slate-300 p-2">
-                      <Image
-                        src={URL.createObjectURL(imageFile)}
-                        alt="Preview"
-                        width={128}
-                        height={128}
-                        className="w-full max-h-96 object-contain"
-                      />
+                      <div className="flex flex-col gap-2 bg-slate-300 p-2">
+                        <Image
+                          src={URL.createObjectURL(imageFile)}
+                          alt="Preview"
+                          width={128}
+                          height={128}
+                          className="w-full max-h-96 object-contain"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-                {payment?.proofOfPaymentURL && (
-                  <div className="flex flex-col gap-2">
-                    <Separator />
-                    <Label>Current Proof of Payment</Label>
-                    <div className="flex flex-col gap-2 bg-slate-300 p-2">
-                      <Image
-                        src={payment.proofOfPaymentURL}
-                        alt="Preview"
-                        width={128}
-                        height={128}
-                        className="w-full max-h-96 object-contain"
-                      />
+                  )}
+                  {payment?.proofOfPaymentURL && (
+                    <div className="flex flex-col gap-2">
+                      <Separator />
+                      <Label>Current Proof of Payment</Label>
+                      <div className="flex flex-col gap-2 bg-slate-300 p-2">
+                        <Image
+                          src={payment.proofOfPaymentURL}
+                          alt="Preview"
+                          width={128}
+                          height={128}
+                          className="w-full max-h-96 object-contain"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
             <SheetFooter>
               <Button loading={isPending} type="submit">
@@ -392,4 +401,4 @@ const UploadPaymentForm = ({
   )
 }
 
-export default UploadPaymentForm
+export default UpdatePaymentForm

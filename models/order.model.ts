@@ -35,6 +35,7 @@ const PaymentStatusItem = new Schema<IPaymentStatusItem>(
 
 const Order = new Schema<IOrder>(
   {
+    orderNumber: { type: String, required: true, unique: true },
     customerName: { type: String, required: true },
     orderSlipURL: { type: String, required: true },
     amountToBePaid: { type: Number, required: true },

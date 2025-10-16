@@ -55,6 +55,7 @@ const ORDER = gql`
   query Order($_id: ID!) {
     order(_id: $_id) {
       _id
+      orderNumber
       customerName
       orderSlipURL
       amountToBePaid
@@ -67,17 +68,21 @@ const ORDER = gql`
 `
 
 const OrderSchema = z.object({
+  orderNumber: z.string().min(1, "Order number is required"),
   customerName: z.string().min(1, "Customer name is required"),
   amountToBePaid: z
     .number("Amount must be a number")
     .min(0, "Amount must be at least 0"),
   dateReceived: z.date("Invalid date"),
+  orderSlipURL: z.union([z.string().url(), z.literal("")]),
 })
 
 const DEFAULT_VALUES = {
+  orderNumber: "",
   customerName: "",
   amountToBePaid: 0,
   dateReceived: new Date(),
+  orderSlipURL: "",
 }
 
 const OrderForm = ({
@@ -89,7 +94,7 @@ const OrderForm = ({
   refetch?: () => void
   onCloseParent?: () => void
 }) => {
-  const [open, setOpen] = useState(false)
+  const [openForm, setOpenForm] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const imageRef = useRef<HTMLInputElement>(null)
@@ -99,24 +104,26 @@ const OrderForm = ({
   })
   const [submit] = useMutation(_id ? UPDATE_ORDER : CREATE_ORDER)
   const { data } = useQuery(ORDER, {
-    skip: !_id || !open,
+    skip: !_id || !openForm,
     variables: { _id },
   })
   const order = (data as any)?.order as IOrder
 
   useEffect(() => {
-    if (open) {
+    if (openForm) {
       if (_id) {
         form.reset({
+          orderNumber: order?.orderNumber || "",
           customerName: order?.customerName || "",
           amountToBePaid: order?.amountToBePaid || 0,
           dateReceived: order?.orderStatuses?.[0]?.date
             ? new Date(order.orderStatuses[0].date)
             : new Date(),
+          orderSlipURL: order?.orderSlipURL || "",
         })
       } else form.reset(DEFAULT_VALUES)
     }
-  }, [open, form, data, _id, order])
+  }, [openForm, form, _id, order])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -134,7 +141,7 @@ const OrderForm = ({
   }
 
   const onUpload = async () => {
-    if (!imageFile) return null
+    if (!imageFile) return
     try {
       const formData = new FormData()
       formData.append("image", imageFile, imageFile.name)
@@ -154,7 +161,7 @@ const OrderForm = ({
     form.clearErrors()
     setImageFile(null)
     if (imageRef.current) imageRef.current.value = ""
-    setOpen(false)
+    setOpenForm(false)
     refetch?.()
     onCloseParent?.()
   }
@@ -168,9 +175,7 @@ const OrderForm = ({
           variables: {
             input: {
               ...(_id ? { _id, ...rest } : data),
-              ...(order?.orderSlipURL
-                ? { orderSlipURL: order?.orderSlipURL }
-                : uploadResponse.url
+              ...(uploadResponse?.url
                 ? { orderSlipURL: uploadResponse.url }
                 : {}),
             },
@@ -187,7 +192,7 @@ const OrderForm = ({
     })
 
   return (
-    <Sheet open={open} onOpenChange={setOpen} modal>
+    <Sheet open={openForm} onOpenChange={setOpenForm} modal>
       <SheetTrigger asChild>
         {_id ? (
           <Button variant="outline" className="w-full">
@@ -217,6 +222,23 @@ const OrderForm = ({
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-2 flex flex-col gap-4 flex-1 overflow-y-auto max-h-[100%]">
+              <FormField
+                control={form.control}
+                name="orderNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Order Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Job Order Number"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="customerName"
@@ -263,23 +285,32 @@ const OrderForm = ({
                   <FormItem>
                     <FormLabel>Date Received</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Date Received"
-                        type="datetime-local"
-                        value={
-                          field.value
-                            ? format(
-                                new Date(field.value),
-                                "yyyy-MM-dd'T'HH:mm"
-                              )
-                            : format(new Date(), "yyyy-MM-dd'T'HH:mm")
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
-                        }
-                        disabled={isPending}
-                      />
+                      <div className="flex gap-1">
+                        <Input
+                          {...field}
+                          placeholder="Date Received"
+                          type="datetime-local"
+                          value={
+                            field.value
+                              ? format(
+                                  new Date(field.value),
+                                  "yyyy-MM-dd'T'HH:mm"
+                                )
+                              : format(new Date(), "yyyy-MM-dd'T'HH:mm")
+                          }
+                          onChange={(e) =>
+                            field.onChange(new Date(e.target.value))
+                          }
+                          disabled={isPending}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => field.onChange(new Date())}
+                          disabled={isPending}
+                        >
+                          Now
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

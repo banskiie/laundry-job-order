@@ -15,7 +15,7 @@ import { gql } from "@apollo/client"
 import { useQuery } from "@apollo/client/react"
 import Image from "next/image"
 import { useState } from "react"
-import UploadPaymentForm from "./form"
+import UpdatePaymentForm from "./form"
 import { useSession } from "next-auth/react"
 import { IUser } from "@/types/user.interface"
 
@@ -110,23 +110,25 @@ const ViewPayment = ({
                 }).format(payment?.amountPaid)}
               </span>
             </div>
-            <div className="grid gap-1 col-span-2">
-              <Label>Proof of Payment</Label>
-              <Image
-                src={payment?.proofOfPaymentURL}
-                alt="Payment Slip"
-                width={500}
-                height={500}
-                className="w-full max-w-md h-auto object-contain"
-                priority
-                fetchPriority="high"
-                loading="eager"
-              />
-            </div>
+            {payment?.proofOfPaymentURL && (
+              <div className="grid gap-1 col-span-2">
+                <Label>Proof of Payment</Label>
+                <Image
+                  src={payment?.proofOfPaymentURL}
+                  alt="Payment Slip"
+                  width={500}
+                  height={500}
+                  className="w-full max-w-md h-auto object-contain"
+                  priority
+                  fetchPriority="high"
+                  loading="eager"
+                />
+              </div>
+            )}
           </div>
           <SheetFooter>
             {showEdit && (
-              <UploadPaymentForm _id={payment?._id} onCloseParent={onClose} />
+              <UpdatePaymentForm _id={payment?._id} onCloseParent={onClose} />
             )}
             <SheetClose asChild>
               <Button variant="outline" onClick={onClose}>

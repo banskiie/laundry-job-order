@@ -34,6 +34,7 @@ const ORDERS = gql`
         cursor
         node {
           _id
+          orderNumber
           customerName
           amountToBePaid
           dateReceived
@@ -176,14 +177,21 @@ const Page = () => {
             <div className="p-2 border flex gap-2 justify-between">
               <div>
                 <span className="block text-sm">
-                  Customer: {o.node.customerName}
+                  Order #:{" "}
+                  <span className="font-medium">{o.node.orderNumber}</span>
+                </span>
+                <span className="block text-sm">
+                  Customer:{" "}
+                  <span className="font-medium">{o.node.customerName}</span>
                 </span>
                 <span className="block text-sm">
                   Amount:{" "}
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "PHP",
-                  }).format(o.node.amountToBePaid)}
+                  <span className="font-medium">
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "PHP",
+                    }).format(o.node.amountToBePaid)}
+                  </span>
                 </span>
                 <span className="block text-sm">
                   Date: {format(new Date(o.node.dateReceived), "Ppp")}

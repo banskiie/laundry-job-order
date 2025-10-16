@@ -39,6 +39,7 @@ const ORDER = gql`
   query Order($_id: ID!) {
     order(_id: $_id) {
       _id
+      orderNumber
       customerName
       orderSlipURL
       amountToBePaid
@@ -316,7 +317,6 @@ const ViewOrder = ({
   } = useQuery(ORDER, {
     skip: !_id,
     variables: { _id },
-    fetchPolicy: "network-only",
   })
 
   const latestOrderStatus = (data as any)?.order?.orderStatuses[
@@ -334,13 +334,11 @@ const ViewOrder = ({
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpenView(isOpen)
-    if (isOpen && _id) {
-      refreshData()
-    }
+    if (isOpen && _id) refreshData()
   }
 
   const order = (data as any)?.order
-  if (loading) return <Skeleton className="h-[100px] w-full rounded-none" />
+  if (loading) return <Skeleton className="h-[120px] w-full rounded-none" />
 
   const onClose = () => {
     setOpenView(false)
@@ -382,6 +380,10 @@ const ViewOrder = ({
               />
             </div>
             <div className="grid gap-1 col-span-2">
+              <Label>Job Order No.</Label>
+              <span>{order?.orderNumber}</span>
+            </div>
+            <div className="grid gap-1 col-span-2">
               <Label>Customer Name</Label>
               <span>{order?.customerName}</span>
             </div>
@@ -415,7 +417,7 @@ const ViewOrder = ({
             )}
             {showCancel && <CancelWarning _id={order?._id} onClose={onClose} />}
             {showUpload && (
-              <UploadPaymentForm _id={order?._id} refetch={refetch} />
+              <UploadPaymentForm _id={order?._id} onCloseParent={onClose} />
             )}
             {showRelease && (
               <ReleaseWarning _id={order?._id} onClose={onClose} />

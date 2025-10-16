@@ -29,6 +29,7 @@ export default gql`
 
   type Order {
     _id: ID!
+    orderNumber: String!
     customerName: String!
     orderSlipURL: String!
     amountToBePaid: Float!
@@ -47,6 +48,7 @@ export default gql`
 
   type OrderNode {
     _id: ID!
+    orderNumber: String!
     customerName: String!
     amountToBePaid: Float!
     dateReceived: DateTime!
@@ -60,6 +62,7 @@ export default gql`
   }
 
   input CreateOrderInput {
+    orderNumber: String!
     customerName: String!
     amountToBePaid: Float!
     orderSlipURL: String!
@@ -68,6 +71,7 @@ export default gql`
 
   input UpdateOrderInput {
     _id: ID!
+    orderNumber: String
     customerName: String
     amountToBePaid: Float
     orderSlipURL: String!
