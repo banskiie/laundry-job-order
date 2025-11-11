@@ -19,7 +19,10 @@ const paymentResolvers = {
           throw new GraphQLError("Payment not found", {
             extensions: { code: "NOT_FOUND" },
           })
-        return payment
+        return {
+          ...payment.toObject(),
+          amountToBePaid: payment.order.amountToBePaid,
+        }
       } catch (error) {
         throw error
       }
@@ -36,6 +39,7 @@ const paymentResolvers = {
           matchStage.$or = [
             { customerName: { $regex: search, $options: "i" } },
             { paymentMethod: { $regex: search, $options: "i" } },
+            { orderNumber: { $regex: search, $options: "i" } },
             { amountPaid: Number(search) },
           ]
 
@@ -100,6 +104,8 @@ const paymentResolvers = {
           {
             $addFields: {
               customerName: "$order.customerName",
+              orderNumber: "$order.orderNumber",
+              amountToBePaid: "$order.amountToBePaid",
             },
           },
           { $match: matchStage },
@@ -113,7 +119,9 @@ const paymentResolvers = {
           { $limit: first + 1 },
           {
             $project: {
+              amountToBePaid: 1,
               customerName: 1,
+              orderNumber: 1,
               amountPaid: 1,
               datePaid: 1,
               paymentMethod: 1,

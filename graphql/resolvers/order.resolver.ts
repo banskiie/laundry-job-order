@@ -10,6 +10,7 @@ import {
   type IOrderInput,
 } from "@/types/order.interface"
 import { pusherServer } from "@/lib/pusher"
+import Payment from "@/models/payment.model"
 
 const orderResolvers = {
   Query: {
@@ -19,11 +20,21 @@ const orderResolvers = {
           "orderStatuses.by paymentStatuses.by"
         )
 
+        const payments = await Payment.find({ order: args._id })
+
+        const paidAmount = payments.reduce(
+          (acc, payment) => acc + payment.amountPaid,
+          0
+        )
+
         if (!order)
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
           })
-        return order
+        return {
+          ...order.toObject(),
+          amountMissing: order.amountToBePaid - paidAmount,
+        }
       } catch (error) {
         throw error
       }

@@ -29,7 +29,9 @@ const PAYMENT = gql`
       datePaid
       order {
         customerName
+        orderNumber
       }
+      amountToBePaid
     }
   }
 `
@@ -67,7 +69,7 @@ const ViewPayment = ({
   }
 
   const payment = (data as any)?.payment
-  if (loading) return <Skeleton className="h-[98px] w-full rounded-none" />
+  if (loading) return <Skeleton className="h-[172px] w-full rounded-none" />
 
   const onClose = () => {
     setOpenView(false)
@@ -102,13 +104,26 @@ const ViewPayment = ({
               </span>
             </div>
             <div className="grid gap-1 col-span-2">
-              <Label>Amount </Label>
+              <Label>Amount Due</Label>
+              <span>
+                {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "PHP",
+                }).format(payment?.amountToBePaid)}
+              </span>
+            </div>
+            <div className="grid gap-1 col-span-2">
+              <Label>Amount Paid</Label>
               <span>
                 {new Intl.NumberFormat("en-US", {
                   style: "currency",
                   currency: "PHP",
                 }).format(payment?.amountPaid)}
               </span>
+            </div>
+            <div className="grid gap-1 col-span-2">
+              <Label>Order Number</Label>
+              <span>{payment?.order?.orderNumber}</span>
             </div>
             {payment?.proofOfPaymentURL && (
               <div className="grid gap-1 col-span-2">

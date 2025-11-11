@@ -33,6 +33,7 @@ export default gql`
     customerName: String!
     orderSlipURL: String!
     amountToBePaid: Float!
+    amountMissing: Float
     orderStatuses: [OrderStatusItem!]!
     paymentStatuses: [PaymentStatusItem!]!
     createdAt: DateTime!

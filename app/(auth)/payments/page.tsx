@@ -12,6 +12,8 @@ import { TrashIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { pusherClient } from "@/lib/pusher"
 import { toast } from "sonner"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 
 const PAYMENTS = gql`
   query Payments($first: Int!, $search: String) {
@@ -26,6 +28,8 @@ const PAYMENTS = gql`
           amountPaid
           datePaid
           paymentMethod
+          orderNumber
+          amountToBePaid
         }
       }
       pageInfo {
@@ -45,8 +49,6 @@ interface Filter {
 const ROWS_INCREMENT = 5
 
 const Page = () => {
-  const { data: session } = useSession()
-  const user: IUser & any = session?.user
   const [rows, setRows] = useState<number>(ROWS_INCREMENT)
   const [search, setSearch] = useState<string>("")
   const [searchKeyword, setSearchKeyword] = useState<string>("")
@@ -120,16 +122,31 @@ const Page = () => {
               key={o.cursor}
               className="p-2 border flex gap-2 justify-between"
             >
-              <div>
+              <div className="w-full">
                 <span className="block text-sm">
                   Customer: {o.node.customerName}
+                </span>
+                <span className="block text-sm">
+                  Order No.: {o.node.orderNumber}
                 </span>
                 <span className="block text-sm capitalize">
                   Payment Method:{" "}
                   {o.node.paymentMethod.replaceAll("_", " ").toLowerCase()}
                 </span>
                 <span className="block text-sm">
-                  Amount:{" "}
+                  <span className="font-medium text-orange-800">
+                    Amount Due:{" "}
+                  </span>
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "PHP",
+                  }).format(o.node.amountToBePaid)}
+                </span>
+                <Separator className="my-1" />
+                <span className="block text-sm">
+                  <span className="font-medium text-green-800">
+                    Amount Paid:{" "}
+                  </span>
                   {new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: "PHP",
@@ -138,6 +155,18 @@ const Page = () => {
                 <span className="block text-sm">
                   Date Paid: {format(new Date(o.node.datePaid), "Ppp")}
                 </span>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    o.node.amountPaid >= o.node.amountToBePaid
+                      ? "border-green-700 text-green-700 bg-green-700/10"
+                      : "border-orange-700 text-orange-700 bg-orange-700/10"
+                  )}
+                >
+                  {o.node.amountPaid >= o.node.amountToBePaid
+                    ? "Full Payment"
+                    : "Partial Payment"}
+                </Badge>
               </div>
             </div>
           </ViewPayment>

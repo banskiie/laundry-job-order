@@ -15,6 +15,7 @@ export default gql`
     order: Order!
     proofOfPaymentURL: String
     paymentMethod: PaymentMethod!
+    amountToBePaid: Float!
     amountPaid: Float!
     datePaid: DateTime!
     createdAt: DateTime!
@@ -30,8 +31,10 @@ export default gql`
 
   type PaymentNode {
     _id: ID!
+    orderNumber: String
     customerName: String
     amountPaid: Float!
+    amountToBePaid: Float!
     datePaid: DateTime!
     paymentMethod: PaymentMethod!
   }

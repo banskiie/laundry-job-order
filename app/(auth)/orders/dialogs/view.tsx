@@ -43,6 +43,7 @@ const ORDER = gql`
       customerName
       orderSlipURL
       amountToBePaid
+      amountMissing
       orderStatuses {
         status
         date
@@ -388,7 +389,7 @@ const ViewOrder = ({
               <span>{order?.customerName}</span>
             </div>
             <div className="grid gap-1 col-span-2">
-              <Label>Amount </Label>
+              <Label className="text-orange-800">Amount Due</Label>
               <span>
                 {new Intl.NumberFormat("en-US", {
                   style: "currency",
@@ -396,6 +397,18 @@ const ViewOrder = ({
                 }).format(order?.amountToBePaid)}
               </span>
             </div>
+            {order?.amountMissing > 0 && order?.amountMissing && (
+              <div className="grid gap-1 col-span-2">
+                <Label className="text-blue-700">Unpaid Amount</Label>
+                <span>
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "PHP",
+                  }).format(order?.amountMissing)}
+                </span>
+              </div>
+            )}
+
             <div className="grid gap-1 col-span-2">
               <Label>Job Order Slip</Label>
               <Image
