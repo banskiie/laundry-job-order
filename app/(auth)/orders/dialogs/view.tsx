@@ -320,12 +320,19 @@ const ViewOrder = ({
     variables: { _id },
   })
 
+  const user = sessionData?.user as IUser
+
+  const isCashier = user?.role === "CASHIER"
+
+  console.log("order data:", user)
+
   const latestOrderStatus = (data as any)?.order?.orderStatuses[
     (data as any)?.order?.orderStatuses.length - 1
   ]?.status
 
   const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
-  const showReadyToPay = latestOrderStatus === OrderStatus.RECEIVED
+  const showReadyToPay =
+    latestOrderStatus === OrderStatus.RECEIVED && !isCashier
   const showCancel = latestOrderStatus === OrderStatus.RECEIVED
   const showRelease = latestOrderStatus === OrderStatus.READY_TO_PAY
   const showUpload =
