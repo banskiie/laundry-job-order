@@ -321,10 +321,7 @@ const ViewOrder = ({
   })
 
   const user = sessionData?.user as IUser
-
   const isCashier = user?.role === "CASHIER"
-
-  console.log("order data:", user)
 
   const latestOrderStatus = (data as any)?.order?.orderStatuses[
     (data as any)?.order?.orderStatuses.length - 1
