@@ -36,6 +36,7 @@ export default gql`
     amountMissing: Float
     orderStatuses: [OrderStatusItem!]!
     paymentStatuses: [PaymentStatusItem!]!
+    addedToPOS: Boolean
     createdAt: DateTime!
     updatedAt: DateTime!
   }
@@ -55,6 +56,7 @@ export default gql`
     dateReceived: DateTime!
     currentStatus: OrderStatus!
     paymentStatus: PaymentStatus!
+    addedToPOS: Boolean
   }
 
   type OrderEdge {
@@ -94,5 +96,6 @@ export default gql`
     updateOrder(input: UpdateOrderInput!): Response!
     deleteOrder(_id: ID!): Response!
     changeOrderStatus(_id: ID!, status: OrderStatus!): Response!
+    changeAddedToPOSStatus(_id: ID!, status: Boolean!): Response!
   }
 `

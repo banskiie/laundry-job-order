@@ -75,9 +75,11 @@ const DEFAULT_VALUES = {
 const UploadPaymentForm = ({
   _id,
   onCloseParent,
+  unpaidAmount = 0,
 }: {
   _id: string
   onCloseParent?: () => void
+  unpaidAmount?: number
 }) => {
   const [openUpload, setOpenUpload] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -262,6 +264,18 @@ const UploadPaymentForm = ({
                   </FormItem>
                 )}
               />
+              {unpaidAmount && unpaidAmount > 0 && (
+                <span className="text-sm -my-1.5 p-2 border rounded-md bg-red-100">
+                  Unpaid Amount:{" "}
+                  <span className="text-red-600 font-medium underline">
+                    {unpaidAmount.toLocaleString("en-PH", {
+                      style: "currency",
+                      currency: "PHP",
+                    })}
+                  </span>
+                </span>
+              )}
+
               <FormField
                 control={form.control}
                 name="isFullyPaid"

@@ -41,6 +41,7 @@ const Order = new Schema<IOrder>(
     amountToBePaid: { type: Number, required: true },
     orderStatuses: [OrderStatusItem],
     paymentStatuses: [PaymentStatusItem],
+    addedToPOS: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

@@ -1,4 +1,4 @@
-import { endOfDay, startOfDay } from "date-fns"
+import { add, endOfDay, startOfDay } from "date-fns"
 import { GraphQLError } from "graphql"
 import { Types, type PipelineStage } from "mongoose"
 import { fromCursor, toCursor } from "@/helpers/cursor"
@@ -121,6 +121,7 @@ const orderResolvers = {
           { $limit: first + 1 },
           {
             $project: {
+              addedToPOS: 1,
               orderNumber: 1,
               customerName: 1,
               amountToBePaid: 1,
@@ -292,6 +293,41 @@ const orderResolvers = {
           message: `Order is now ${args.status
             .replaceAll("_", " ")
             .toLowerCase()}`,
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+    changeAddedToPOSStatus: async (
+      _: any,
+      args: { _id: string; status: boolean },
+      context: any
+    ) => {
+      try {
+        console.log("args", args)
+        if (!context.session)
+          throw new GraphQLError("Unauthorized", {
+            extensions: { code: "UNAUTHORIZED" },
+          })
+        const order = await Order.findById(args._id)
+        if (!order)
+          throw new GraphQLError("Order not found", {
+            extensions: { code: "NOT_FOUND" },
+          })
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `Order from ${order.orderNumber} ${
+            args.status ? "added to" : "removed from"
+          } POS.`,
+        })
+        order.addedToPOS = args.status
+
+        await order.save()
+        return {
+          ok: true,
+          message: `Order from ${order.orderNumber} ${
+            args.status ? "added to" : "removed from"
+          } POS.`,
         }
       } catch (error) {
         throw error

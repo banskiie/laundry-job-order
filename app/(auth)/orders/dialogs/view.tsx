@@ -44,6 +44,7 @@ const ORDER = gql`
       orderSlipURL
       amountToBePaid
       amountMissing
+      addedToPOS
       orderStatuses {
         status
         date
@@ -67,6 +68,15 @@ const ORDER = gql`
 const CHANGE_ORDER_STATUS = gql`
   mutation ChangeOrderStatus($_id: ID!, $status: OrderStatus!) {
     changeOrderStatus(_id: $_id, status: $status) {
+      ok
+      message
+    }
+  }
+`
+
+const CHANGE_POS_STATUS = gql`
+  mutation ChangeAddedToPOSStatus($_id: ID!, $status: Boolean!) {
+    changeAddedToPOSStatus(_id: $_id, status: $status) {
       ok
       message
     }
@@ -299,6 +309,63 @@ const VerifyWarning = ({
   )
 }
 
+const ChangePOSStatus = ({
+  _id,
+  onClose,
+  posStatus = false,
+}: {
+  _id?: string
+  onClose: () => void
+  posStatus?: boolean
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [changePOSStatus, { loading }] = useMutation(CHANGE_POS_STATUS, {
+    variables: { _id, status: !posStatus },
+  })
+
+  const onCompleted = () => {
+    setOpenWarning(false)
+    onClose()
+  }
+
+  return (
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
+      <AlertDialogTrigger asChild>
+        <Button className="bg-purple-800 hover:bg-purple-800/90">
+          {posStatus ? "Remove from POS" : "Add to POS"}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You will {posStatus ? "remove" : "add"} this order to the POS
+            system.{" "}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            className="bg-purple-800 hover:bg-purple-800/90"
+            loading={loading}
+            onClick={async () =>
+              await changePOSStatus().then((data: any) => {
+                const message = data.data?.changeOrderStatus?.message
+                if (message) toast.success(message)
+                onCompleted()
+              })
+            }
+          >
+            Yes, {posStatus ? "remove from" : "add to"} POS
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 const ViewOrder = ({
   children,
   _id,
@@ -309,7 +376,6 @@ const ViewOrder = ({
   refetch: () => void
 }>) => {
   const { data: sessionData } = useSession()
-  const isAdmin = (sessionData?.user as IUser)?.role === "ADMIN"
   const [openView, setOpenView] = useState<boolean>(false)
   const {
     data,
@@ -322,6 +388,7 @@ const ViewOrder = ({
 
   const user = sessionData?.user as IUser
   const isCashier = user?.role === "CASHIER"
+  const isAdmin = user?.role === "ADMIN"
 
   const latestOrderStatus = (data as any)?.order?.orderStatuses[
     (data as any)?.order?.orderStatuses.length - 1
@@ -336,6 +403,7 @@ const ViewOrder = ({
     latestOrderStatus === OrderStatus.RELEASED ||
     latestOrderStatus === OrderStatus.READY_TO_PAY
   const showVerify = latestOrderStatus === OrderStatus.RELEASED
+  const showPOSStatus = user?.role !== "STAFF"
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpenView(isOpen)
@@ -434,12 +502,23 @@ const ViewOrder = ({
             )}
             {showCancel && <CancelWarning _id={order?._id} onClose={onClose} />}
             {showUpload && (
-              <UploadPaymentForm _id={order?._id} onCloseParent={onClose} />
+              <UploadPaymentForm
+                _id={order?._id}
+                onCloseParent={onClose}
+                unpaidAmount={order?.amountMissing}
+              />
             )}
             {showRelease && (
               <ReleaseWarning _id={order?._id} onClose={onClose} />
             )}
             {showVerify && <VerifyWarning _id={order?._id} onClose={onClose} />}
+            {showPOSStatus && (
+              <ChangePOSStatus
+                _id={order?._id}
+                onClose={onClose}
+                posStatus={order?.addedToPOS}
+              />
+            )}
             <SheetClose asChild>
               <Button variant="outline" onClick={onClose}>
                 Close

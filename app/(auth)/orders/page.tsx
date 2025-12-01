@@ -24,6 +24,7 @@ import { TrashIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { pusherClient } from "@/lib/pusher"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 
 const ORDERS = gql`
   query Orders($first: Int!, $filter: [Filter], $search: String) {
@@ -40,6 +41,7 @@ const ORDERS = gql`
           dateReceived
           currentStatus
           paymentStatus
+          addedToPOS
         }
       }
       pageInfo {
@@ -79,6 +81,9 @@ const Page = () => {
     fetchPolicy: "network-only",
   })
   const [orderRows, setOrderRows] = useState<any>([])
+  const isCashier = role === "CASHIER"
+
+  console.log(data)
 
   useEffect(() => {
     if (data) setOrderRows((data as any).orders.edges)
@@ -126,7 +131,7 @@ const Page = () => {
             </Button>
           )}
         </div>
-        <OrderForm refetch={refetch} />
+        {!isCashier && <OrderForm refetch={refetch} />}
         <Select
           value={
             filter.length
@@ -199,6 +204,7 @@ const Page = () => {
                 <div className="flex gap-1">
                   <StatusBadge status={o.node.currentStatus} />
                   <PaymentBadge status={o.node.paymentStatus} />
+                  {o.node.addedToPOS && <Badge>Added to POS</Badge>}
                 </div>
               </div>
             </div>

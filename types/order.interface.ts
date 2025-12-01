@@ -36,6 +36,7 @@ export interface IOrder extends Document {
   amountToBePaid: number
   orderStatuses: IOrderStatusItem[]
   paymentStatuses: IPaymentStatusItem[]
+  addedToPOS: boolean
 }
 
 export interface IOrderStatusInput {
@@ -61,6 +62,7 @@ export interface IOrderNode {
   amountToBePaid: number
   dateReceived: Date
   currentStatus: OrderStatus
+  addedToPOS: boolean
 }
 
 export interface IOrderEdge {
