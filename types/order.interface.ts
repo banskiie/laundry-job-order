@@ -16,6 +16,12 @@ export enum PaymentStatus {
   PAID = "PAID",
 }
 
+export enum POSStatus {
+  UNADDED = "UNADDED",
+  ADDED = "ADDED",
+  VERIFIED = "VERIFIED",
+}
+
 export interface IOrderStatusItem {
   status: OrderStatus
   date: Date
@@ -26,6 +32,7 @@ export interface IPaymentStatusItem {
   status: PaymentStatus
   date: Date
   by: IUser
+  amountPaid?: number
 }
 
 export interface IOrder extends Document {
@@ -36,7 +43,7 @@ export interface IOrder extends Document {
   amountToBePaid: number
   orderStatuses: IOrderStatusItem[]
   paymentStatuses: IPaymentStatusItem[]
-  addedToPOS: boolean
+  addedToPOS: POSStatus
 }
 
 export interface IOrderStatusInput {
@@ -62,7 +69,7 @@ export interface IOrderNode {
   amountToBePaid: number
   dateReceived: Date
   currentStatus: OrderStatus
-  addedToPOS: boolean
+  addedToPOS: POSStatus
 }
 
 export interface IOrderEdge {

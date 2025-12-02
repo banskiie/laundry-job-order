@@ -29,7 +29,7 @@ const PaymentBadge = ({ status }: { status: PaymentStatus }) => {
           variant="outline"
           className="capitalize border-green-700 text-green-700"
         >
-          {currentStatus}
+          Fully {currentStatus}
         </Badge>
       )
     default:

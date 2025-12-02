@@ -208,25 +208,7 @@ const paymentResolvers = {
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
           })
-        if (isFullyPaid) {
-          currentOrder.paymentStatuses.push({
-            status: PaymentStatus.PAID,
-            date: new Date(),
-            by: context.session.user._id,
-          })
-          currentOrder.orderStatuses.push({
-            status: OrderStatus.VERIFIED,
-            date: new Date(),
-            by: context.session.user._id,
-          })
-        } else {
-          currentOrder.paymentStatuses.push({
-            status: PaymentStatus.PARTIALLY_PAID,
-            date: new Date(),
-            by: context.session.user._id,
-          })
-        }
-        await currentOrder.save()
+
         // If fully paid, set amountPaid to the remaining balance
         const amountPaid =
           currentOrder.amountToBePaid > totalPaid
@@ -240,6 +222,22 @@ const paymentResolvers = {
               }
             : rest
         )
+        if (isFullyPaid) {
+          currentOrder.paymentStatuses.push({
+            status: PaymentStatus.PAID,
+            date: new Date(),
+            by: context.session.user._id,
+            amountPaid,
+          })
+        } else {
+          currentOrder.paymentStatuses.push({
+            status: PaymentStatus.PARTIALLY_PAID,
+            date: new Date(),
+            by: context.session.user._id,
+            amountPaid: rest.amountPaid,
+          })
+        }
+        await currentOrder.save()
         await pusherServer.trigger("tables", "refresh-table", {
           ok: true,
           message: `New payment of ₱${amountPaid} uploaded for ${

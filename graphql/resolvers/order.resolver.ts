@@ -7,6 +7,7 @@ import type { IDataTableInput } from "@/types/shared.interface"
 import {
   OrderStatus,
   PaymentStatus,
+  POSStatus,
   type IOrderInput,
 } from "@/types/order.interface"
 import { pusherServer } from "@/lib/pusher"
@@ -280,12 +281,6 @@ const orderResolvers = {
           date: new Date(),
           by: context.session.user._id,
         })
-        if (args.status === OrderStatus.VERIFIED)
-          order.paymentStatuses.push({
-            status: PaymentStatus.PAID,
-            date: new Date(),
-            by: context.session.user._id,
-          })
 
         await order.save()
         return {
@@ -300,11 +295,10 @@ const orderResolvers = {
     },
     changeAddedToPOSStatus: async (
       _: any,
-      args: { _id: string; status: boolean },
+      args: { _id: string; status: POSStatus },
       context: any
     ) => {
       try {
-        console.log("args", args)
         if (!context.session)
           throw new GraphQLError("Unauthorized", {
             extensions: { code: "UNAUTHORIZED" },
@@ -314,6 +308,7 @@ const orderResolvers = {
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
           })
+        console.log(args.status)
         await pusherServer.trigger("tables", "refresh-table", {
           ok: true,
           message: `Order from ${order.orderNumber} ${
@@ -322,7 +317,9 @@ const orderResolvers = {
         })
         order.addedToPOS = args.status
 
-        await order.save()
+        await order.save({
+          timestamps: false,
+        })
         return {
           ok: true,
           message: `Order from ${order.orderNumber} ${

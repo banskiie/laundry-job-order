@@ -3,6 +3,7 @@ import {
   IPaymentStatusItem,
   OrderStatus,
   PaymentStatus,
+  POSStatus,
   type IOrder,
   type IOrderStatusItem,
 } from "../types/order.interface"
@@ -29,6 +30,7 @@ const PaymentStatusItem = new Schema<IPaymentStatusItem>(
     },
     date: { type: Date, required: true },
     by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    amountPaid: { type: Number, required: false },
   },
   { _id: false }
 )
@@ -41,7 +43,11 @@ const Order = new Schema<IOrder>(
     amountToBePaid: { type: Number, required: true },
     orderStatuses: [OrderStatusItem],
     paymentStatuses: [PaymentStatusItem],
-    addedToPOS: { type: Boolean, default: false },
+    addedToPOS: {
+      type: String,
+      enum: Object.values(POSStatus),
+      default: POSStatus.UNADDED,
+    },
   },
   { timestamps: true }
 )

@@ -298,13 +298,13 @@ const UploadPaymentForm = ({
                             Fully paid?
                           </FormLabel>
                           <p className="text-muted-foreground text-sm">
-                            Checking this will{" "}
-                            <span className="underline">
-                              fully pay the remaining/total balance
+                            Check to mark this order as{" "}
+                            <span className="font-semibold text-orange-600">
+                              fully paid
                             </span>{" "}
-                            of this order and mark this as{" "}
-                            <span className="font-semibold text-blue-800">
-                              verified
+                            and{" "}
+                            <span className="underline">
+                              automatically pay the remaining balance
                             </span>
                             .
                           </p>

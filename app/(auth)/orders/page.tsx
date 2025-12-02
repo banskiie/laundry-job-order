@@ -202,9 +202,25 @@ const Page = () => {
                   Date: {format(new Date(o.node.dateReceived), "Ppp")}
                 </span>
                 <div className="flex gap-1">
-                  <StatusBadge status={o.node.currentStatus} />
+                  {o.node.paymentStatus === "PAID" &&
+                  o.node.currentStatus === "READY_TO_PAY" ? (
+                    <Badge className="bg-pink-800">Ready for Release</Badge>
+                  ) : (
+                    <StatusBadge status={o.node.currentStatus} />
+                  )}
                   <PaymentBadge status={o.node.paymentStatus} />
-                  {o.node.addedToPOS && <Badge>Added to POS</Badge>}
+                  {o.node.addedToPOS !== "UNADDED" &&
+                    (() => {
+                      if (o.node.addedToPOS === "ADDED") {
+                        return (
+                          <Badge className="bg-blue-800">Added to POS</Badge>
+                        )
+                      } else if (o.node.addedToPOS === "VERIFIED") {
+                        return (
+                          <Badge className="bg-green-800">POS Verified</Badge>
+                        )
+                      }
+                    })()}
                 </div>
               </div>
             </div>

@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { OrderStatus } from "@/types/order.interface"
+import { OrderStatus, POSStatus } from "@/types/order.interface"
 import { useState } from "react"
 import PaymentBadge from "@/components/payment-badge"
 import UploadPaymentForm from "./upload-payment"
@@ -34,6 +34,18 @@ import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { IUser } from "@/types/user.interface"
 import OrderForm from "./form"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import { Dot } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const ORDER = gql`
   query Order($_id: ID!) {
@@ -58,6 +70,7 @@ const ORDER = gql`
         by {
           name
         }
+        amountPaid
       }
       createdAt
       updatedAt
@@ -75,7 +88,7 @@ const CHANGE_ORDER_STATUS = gql`
 `
 
 const CHANGE_POS_STATUS = gql`
-  mutation ChangeAddedToPOSStatus($_id: ID!, $status: Boolean!) {
+  mutation ChangeAddedToPOSStatus($_id: ID!, $status: POSStatus!) {
     changeAddedToPOSStatus(_id: $_id, status: $status) {
       ok
       message
@@ -312,37 +325,96 @@ const VerifyWarning = ({
 const ChangePOSStatus = ({
   _id,
   onClose,
-  posStatus = false,
+  posStatus = POSStatus.UNADDED,
 }: {
   _id?: string
   onClose: () => void
-  posStatus?: boolean
+  posStatus?: POSStatus
 }) => {
+  const { data: sessionData } = useSession()
+  const user = sessionData?.user as IUser
   const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [status, setStatus] = useState<POSStatus>(posStatus)
   const [changePOSStatus, { loading }] = useMutation(CHANGE_POS_STATUS, {
-    variables: { _id, status: !posStatus },
+    variables: { _id, status },
   })
+  const isAdmin = user?.role === "ADMIN"
 
   const onCompleted = () => {
     setOpenWarning(false)
     onClose()
   }
 
+  const onChangeStatusAsAdmin = async () =>
+    await changePOSStatus().then((data: any) => {
+      const message = data.data?.changeOrderStatus?.message
+      if (message) toast.success(message)
+      onCompleted()
+    })
+
+  const onChangeStatusAsUser = async () =>
+    await changePOSStatus({
+      variables: {
+        _id,
+        status:
+          posStatus === POSStatus.ADDED ? POSStatus.UNADDED : POSStatus.ADDED,
+      },
+    }).then((data: any) => {
+      const message = data.data?.changeOrderStatus?.message
+      if (message) toast.success(message)
+      onCompleted()
+    })
+
   return (
     <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
       <AlertDialogTrigger asChild>
-        <Button className="bg-purple-800 hover:bg-purple-800/90">
-          {posStatus ? "Remove from POS" : "Add to POS"}
+        <Button
+          variant={posStatus ? "outline" : "default"}
+          className={cn(
+            "w-full",
+            posStatus
+              ? "border-purple-800 text-purple-800 hover:bg-purple-800/10"
+              : "bg-purple-800 hover:bg-purple-800/90"
+          )}
+        >
+          {posStatus === POSStatus.ADDED ? "Remove from POS" : "Add to POS"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {isAdmin
+              ? "Are you sure?"
+              : `${status === POSStatus.ADDED ? "Remove from" : "Add to"} POS`}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            You will {posStatus ? "remove" : "add"} this order to the POS
-            system.{" "}
+            {isAdmin
+              ? "You are changing the POS status of this order."
+              : status === POSStatus.ADDED
+              ? "You will remove this order from the POS system."
+              : "You will add this order to the POS system. This will be verified by an admin."}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {isAdmin && (
+          <Select
+            onValueChange={(e) => setStatus(e as POSStatus)}
+            value={status}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a fruit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {Object.values(POSStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setOpenWarning(false)}>
             Cancel
@@ -351,18 +423,116 @@ const ChangePOSStatus = ({
             className="bg-purple-800 hover:bg-purple-800/90"
             loading={loading}
             onClick={async () =>
-              await changePOSStatus().then((data: any) => {
-                const message = data.data?.changeOrderStatus?.message
-                if (message) toast.success(message)
-                onCompleted()
-              })
+              isAdmin
+                ? await onChangeStatusAsAdmin()
+                : await onChangeStatusAsUser()
             }
           >
-            Yes, {posStatus ? "remove from" : "add to"} POS
+            {isAdmin
+              ? "Yes, change POS status"
+              : status === POSStatus.ADDED
+              ? "Yes, remove from POS"
+              : "Yes, add to POS"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+const ViewOrderHistory = ({
+  _id,
+}: Readonly<{
+  _id?: string
+}>) => {
+  const [openView, setOpenView] = useState<boolean>(false)
+  const { data, refetch: refreshData } = useQuery(ORDER, {
+    skip: !_id,
+    variables: { _id },
+  })
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpenView(isOpen)
+    if (isOpen && _id) refreshData()
+  }
+  const order = (data as any)?.order
+  const onClose = () => setOpenView(false)
+
+  const mergedStatuses = [...order?.orderStatuses, ...order?.paymentStatuses]
+
+  return (
+    <Sheet open={openView} onOpenChange={handleOpenChange} modal>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="w-full">
+          View Order History
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        side="left"
+        className="min-w-full"
+        showCloseButton={false}
+      >
+        <div className="flex flex-col h-full">
+          <SheetHeader>
+            <SheetTitle>View Job Order History</SheetTitle>
+            <SheetDescription>
+              View the details of the job order below.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-2 flex flex-col gap-2 flex-1 overflow-y-auto max-h-[100%]">
+            {mergedStatuses
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .map((item: any, index: number) => (
+                <div key={index} className="flex items-start">
+                  <div className="flex flex-col items-center h-full">
+                    <Dot
+                      className={cn(
+                        "size-12 -my-3.5",
+                        index > 0 ? "text-gray-400/80" : "text-green-800"
+                      )}
+                    />
+                    {index < mergedStatuses.length - 1 && (
+                      <div className="w-px flex-1 bg-gray-400/70" />
+                    )}
+                  </div>
+                  <div
+                    className={cn(
+                      "flex flex-col -my-px",
+                      index > 0 ? "text-muted-foreground" : "text-green-800"
+                    )}
+                  >
+                    <span className="block -mb-1">
+                      {item.status.replaceAll("_", " ")}{" "}
+                      {item.amountPaid &&
+                        new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "PHP",
+                        }).format(item.amountPaid)}
+                    </span>
+                    <span className="text-xs text-muted-foreground block">
+                      {format(new Date(item.date), "PPpp")}
+                    </span>
+                    <span className="text-xs text-muted-foreground block">
+                      by {item.by?.name || "Unknown"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <SheetFooter>
+            <SheetClose asChild>
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+            </SheetClose>
+          </SheetFooter>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -394,23 +564,26 @@ const ViewOrder = ({
     (data as any)?.order?.orderStatuses.length - 1
   ]?.status
 
-  const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
-  const showReadyToPay =
-    latestOrderStatus === OrderStatus.RECEIVED && !isCashier
-  const showCancel = latestOrderStatus === OrderStatus.RECEIVED
-  const showRelease = latestOrderStatus === OrderStatus.READY_TO_PAY
-  const showUpload =
-    latestOrderStatus === OrderStatus.RELEASED ||
-    latestOrderStatus === OrderStatus.READY_TO_PAY
-  const showVerify = latestOrderStatus === OrderStatus.RELEASED
-  const showPOSStatus = user?.role !== "STAFF"
-
   const handleOpenChange = (isOpen: boolean) => {
     setOpenView(isOpen)
     if (isOpen && _id) refreshData()
   }
 
   const order = (data as any)?.order
+
+  const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
+  const showReadyToPay =
+    latestOrderStatus === OrderStatus.RECEIVED && !isCashier
+  const showCancel = latestOrderStatus === OrderStatus.RECEIVED
+  const showRelease =
+    latestOrderStatus === OrderStatus.READY_TO_PAY && order.amountMissing <= 0
+  const showUpload =
+    (latestOrderStatus === OrderStatus.RELEASED ||
+      latestOrderStatus === OrderStatus.READY_TO_PAY) &&
+    order.amountMissing > 0
+  const showVerify = latestOrderStatus === OrderStatus.RELEASED && isAdmin
+  const showPOSStatus = user?.role !== "STAFF"
+
   if (loading) return <Skeleton className="h-[120px] w-full rounded-none" />
 
   const onClose = () => {
@@ -429,7 +602,7 @@ const ViewOrder = ({
       >
         <div className="flex flex-col h-full">
           <SheetHeader>
-            <SheetTitle>View Job Order</SheetTitle>
+            <SheetTitle>View Job Order History</SheetTitle>
             <SheetDescription>
               View the details of the job order below.
             </SheetDescription>
@@ -480,7 +653,6 @@ const ViewOrder = ({
                 </span>
               </div>
             )}
-
             <div className="grid gap-1 col-span-2">
               <Label>Job Order Slip</Label>
               <Image
@@ -519,6 +691,7 @@ const ViewOrder = ({
                 posStatus={order?.addedToPOS}
               />
             )}
+            <ViewOrderHistory _id={order?._id} />
             <SheetClose asChild>
               <Button variant="outline" onClick={onClose}>
                 Close

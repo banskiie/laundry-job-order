@@ -15,6 +15,12 @@ export default gql`
     PAID
   }
 
+  enum POSStatus {
+    UNADDED
+    ADDED
+    VERIFIED
+  }
+
   type OrderStatusItem {
     status: OrderStatus!
     date: DateTime!
@@ -25,6 +31,7 @@ export default gql`
     status: PaymentStatus!
     date: DateTime!
     by: User!
+    amountPaid: Float
   }
 
   type Order {
@@ -36,7 +43,7 @@ export default gql`
     amountMissing: Float
     orderStatuses: [OrderStatusItem!]!
     paymentStatuses: [PaymentStatusItem!]!
-    addedToPOS: Boolean
+    addedToPOS: POSStatus
     createdAt: DateTime!
     updatedAt: DateTime!
   }
@@ -56,7 +63,7 @@ export default gql`
     dateReceived: DateTime!
     currentStatus: OrderStatus!
     paymentStatus: PaymentStatus!
-    addedToPOS: Boolean
+    addedToPOS: POSStatus
   }
 
   type OrderEdge {
@@ -96,6 +103,6 @@ export default gql`
     updateOrder(input: UpdateOrderInput!): Response!
     deleteOrder(_id: ID!): Response!
     changeOrderStatus(_id: ID!, status: OrderStatus!): Response!
-    changeAddedToPOSStatus(_id: ID!, status: Boolean!): Response!
+    changeAddedToPOSStatus(_id: ID!, status: POSStatus!): Response!
   }
 `
