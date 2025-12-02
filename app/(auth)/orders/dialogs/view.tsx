@@ -369,15 +369,16 @@ const ChangePOSStatus = ({
     <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
       <AlertDialogTrigger asChild>
         <Button
-          variant={posStatus ? "outline" : "default"}
+          variant="outline"
           className={cn(
-            "w-full",
-            posStatus
-              ? "border-purple-800 text-purple-800 hover:bg-purple-800/10"
-              : "bg-purple-800 hover:bg-purple-800/90"
+            "w-full border-purple-800 text-purple-800 hover:bg-purple-800/10"
           )}
         >
-          {posStatus === POSStatus.ADDED ? "Remove from POS" : "Add to POS"}
+          {isAdmin
+            ? "Change POS Status"
+            : posStatus === POSStatus.ADDED
+            ? "Remove from POS"
+            : "Add to POS"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
