@@ -179,10 +179,10 @@ const orderResolvers = {
   Mutation: {
     createOrder: async (_: any, args: { input: IOrderInput }, context: any) => {
       try {
-        if (!context.session)
-          throw new GraphQLError("Unauthorized", {
-            extensions: { code: "UNAUTHORIZED" },
-          })
+        // if (!context.session)
+        //   throw new GraphQLError("Unauthorized", {
+        //     extensions: { code: "UNAUTHORIZED" },
+        //   })
         const { dateReceived, ...rest } = args.input
 
         await pusherServer.trigger("tables", "refresh-table", {
@@ -207,6 +207,7 @@ const orderResolvers = {
             },
           ],
         })
+        
         return {
           ok: true,
           message: "Order created successfully",
