@@ -143,10 +143,6 @@ const Page = () => {
   }, [data])
 
   useEffect(() => {
-    console.log(nodes)
-  }, [nodes])
-
-  useEffect(() => {
     const channel = pusherClient.subscribe("tables")
     channel.bind("refresh-table", (d: any) => {
       refetch()
@@ -246,7 +242,9 @@ const Page = () => {
                         e.stopPropagation()
                         e.preventDefault()
                         setDateRange({ from: undefined, to: undefined })
-                        setFilter([])
+                        setFilter((prev) =>
+                          prev.filter((f) => f.key !== "dateReceived")
+                        )
                       }}
                       className="rounded-l-none"
                     >
@@ -255,7 +253,6 @@ const Page = () => {
                   )}
                 </div>
               </PopoverTrigger>
-
               <PopoverContent
                 className="w-auto overflow-hidden p-0 flex"
                 align="start"
@@ -356,7 +353,8 @@ const Page = () => {
                           new Date(dateRange?.from),
                           "yyyy-MM-dd"
                         )}_${format(new Date(dateRange?.to), "yyyy-MM-dd")}`
-                        setFilter([
+                        setFilter((prev) => [
+                          ...prev.filter((f) => f.key !== "dateReceived"),
                           {
                             key: "dateReceived",
                             value: dateRangeISO,
@@ -410,8 +408,13 @@ const Page = () => {
               : "*"
           }
           onValueChange={(value) => {
-            if (value === "*") setFilter([])
-            else setFilter([{ key: "currentStatus", value, type: "TEXT" }])
+            if (value === "*")
+              setFilter((prev) => prev.filter((f) => f.key !== "currentStatus"))
+            else
+              setFilter((prev) => [
+                { key: "currentStatus", value, type: "TEXT" },
+                ...prev.filter((f) => f.key !== "currentStatus"),
+              ])
           }}
         >
           <SelectTrigger className="w-full">
