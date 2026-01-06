@@ -1,4 +1,4 @@
-import { Document, ObjectId } from "mongoose"
+import { Document, Types } from "mongoose"
 import { IPageInfo } from "./shared.interface"
 import { IOrder } from "./order.interface"
 
@@ -12,7 +12,7 @@ export enum PaymentMethod {
 }
 
 export interface IPayment extends Document {
-  _id: ObjectId
+  _id: Types.ObjectId
   order: IOrder
   proofOfPaymentURL?: string
   paymentMethod: PaymentMethod
@@ -22,8 +22,8 @@ export interface IPayment extends Document {
 }
 
 export interface IPaymentInput extends Request {
-  _id: ObjectId
-  order: ObjectId
+  _id: Types.ObjectId
+  order: Types.ObjectId
   proofOfPaymentURL?: string
   paymentMethod: PaymentMethod
   amountPaid: number
@@ -32,7 +32,7 @@ export interface IPaymentInput extends Request {
 }
 
 export interface IPaymentNode {
-  _id: ObjectId
+  _id: Types.ObjectId
   customerName?: string
   amountPaid: number
   datePaid: Date

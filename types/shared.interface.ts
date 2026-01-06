@@ -1,5 +1,4 @@
-import type { ObjectId } from "mongoose"
-import type { IUser } from "./user.interface.js"
+import { IUser } from "./user.interface.js"
 
 export interface IResponse {
   ok: boolean

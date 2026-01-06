@@ -1,4 +1,4 @@
-import { Document, ObjectId } from "mongoose"
+import { Document, Types } from "mongoose"
 import { IPageInfo } from "./shared.interface"
 
 export enum Role {
@@ -8,7 +8,7 @@ export enum Role {
 }
 
 export interface IUser extends Document {
-  _id: ObjectId
+  _id: Types.ObjectId
   name: string
   username: string
   password?: string
@@ -17,7 +17,7 @@ export interface IUser extends Document {
 }
 
 export interface IUserInput extends Request {
-  _id: ObjectId
+  _id: Types.ObjectId
   name: string
   username: string
   password?: string
@@ -26,7 +26,7 @@ export interface IUserInput extends Request {
 }
 
 export interface IUserNode {
-  _id: ObjectId
+  _id: Types.ObjectId
   name: string
   username: string
   role: Role

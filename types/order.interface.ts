@@ -1,4 +1,4 @@
-import { Document, ObjectId } from "mongoose"
+import { Document, Types } from "mongoose"
 import { IPageInfo } from "./shared.interface"
 import { IUser } from "./user.interface"
 
@@ -36,7 +36,7 @@ export interface IPaymentStatusItem {
 }
 
 export interface IOrder extends Document {
-  _id: ObjectId
+  _id: Types.ObjectId
   orderNumber: string
   customerName: string
   orderSlipURL: string
@@ -49,11 +49,11 @@ export interface IOrder extends Document {
 export interface IOrderStatusInput {
   status: OrderStatus
   date: Date
-  by: ObjectId
+  by: Types.ObjectId
 }
 
 export interface IOrderInput extends Request {
-  _id: ObjectId
+  _id: Types.ObjectId
   orderNumber: string
   customerName: string
   orderSlipURL: string
@@ -63,7 +63,7 @@ export interface IOrderInput extends Request {
 }
 
 export interface IOrderNode {
-  _id: ObjectId
+  _id: Types.ObjectId
   orderNumber: string
   customerName: string
   amountToBePaid: number
