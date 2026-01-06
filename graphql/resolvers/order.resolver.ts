@@ -73,7 +73,7 @@ const orderResolvers = {
                 return { [key]: { $gte: startDate, $lte: endDate } }
               case "DATE_RANGE":
                 const [start, end] = value
-                  .split(",")
+                  .split("_")
                   .map((date) => new Date(date))
                 if (!start || !end) return
                 return {
@@ -116,7 +116,7 @@ const orderResolvers = {
             $sort: {
               ...(sort
                 ? { [sort.key]: sort.order === "ASC" ? 1 : -1 }
-                : { updatedAt: -1 }), // Default to sorting by latest _id if no sort is provided
+                : { _id: -1 }), // Default to sorting by latest _id if no sort is provided
             },
           },
           { $limit: first + 1 },
@@ -207,7 +207,7 @@ const orderResolvers = {
             },
           ],
         })
-        
+
         return {
           ok: true,
           message: "Order created successfully",
