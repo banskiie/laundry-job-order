@@ -160,6 +160,8 @@ const orderResolvers = {
           { $count: "total" },
         ]).then((res) => (res[0] ? res[0].total : 0))
 
+        console.log(data.length > first)
+
         return {
           total,
           pages: Math.ceil(total / first),

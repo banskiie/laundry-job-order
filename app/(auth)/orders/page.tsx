@@ -110,7 +110,7 @@ const Page = () => {
   )
   const { data, refetch, fetchMore, loading } = useQuery(ORDERS, {
     variables: {
-      first: rows,
+      first: rows * page.current,
       filter,
       search,
     },
@@ -132,15 +132,17 @@ const Page = () => {
 
     setPage((prev) => ({
       ...prev,
-      max: (data as any)?.orders.pages || 1,
+      max: (data as any)?.orders.pages,
     }))
 
     return {
-      total: (data as any)?.orders.total || 0,
+      total: (data as any)?.orders.total,
       nodes,
       pageInfo,
     }
   }, [data])
+
+  useEffect(() => console.log(page), [page])
 
   useEffect(() => {
     const channel = pusherClient.subscribe("tables")
@@ -474,11 +476,11 @@ const Page = () => {
                   Prev
                 </Button>
                 <ButtonGroupText className="font-normal text-muted-foreground text-sm h-7">
-                  Page {page.current} of {page.max}
+                  Page {page.current}
                 </ButtonGroupText>
                 <Button
                   variant="outline"
-                  disabled={page.current === page.max}
+                  disabled={page.current === page.max || !pageInfo.hasNextPage}
                   onClick={goNext}
                   size="sm"
                   className="disabled:bg-muted disabled:border-gray-300 h-7 text-sm"
