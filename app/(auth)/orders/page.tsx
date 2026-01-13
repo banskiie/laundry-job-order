@@ -142,8 +142,6 @@ const Page = () => {
     }
   }, [data])
 
-  useEffect(() => console.log(page), [page])
-
   useEffect(() => {
     const channel = pusherClient.subscribe("tables")
     channel.bind("refresh-table", (d: any) => {
@@ -432,6 +430,33 @@ const Page = () => {
               <SelectItem value={OrderStatus.RELEASED}>Released</SelectItem>
               <SelectItem value={OrderStatus.VERIFIED}>Verified</SelectItem>
               <SelectItem value={OrderStatus.CANCELLED}>Cancelled</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
+          value={
+            filter.length
+              ? (filter.find((f) => f.key === "addedToPOS")?.value as string)
+              : "*"
+          }
+          onValueChange={(value) => {
+            if (value === "*")
+              setFilter((prev) => prev.filter((f) => f.key !== "addedToPOS"))
+            else
+              setFilter((prev) => [
+                { key: "addedToPOS", value, type: "TEXT" },
+                ...prev.filter((f) => f.key !== "addedToPOS"),
+              ])
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="*">All Orders</SelectItem>
+              <SelectItem value="ADDED">Added to POS</SelectItem>
+              <SelectItem value="UNADDED">Not in POS</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

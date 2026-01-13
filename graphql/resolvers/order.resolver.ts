@@ -60,7 +60,9 @@ const orderResolvers = {
           matchStage.$and = filter.map(({ key, value, type }) => {
             switch (type) {
               case "TEXT":
-                return { [key]: { $regex: value, $options: "i" } }
+                console.log(key, value)
+                if (key === "addedToPOS") return { [key]: value }
+                else return { [key]: { $regex: value, $options: "i" } }
               case "NUMBER":
                 return { [key]: Number(value) }
               case "NUMBER_RANGE":
@@ -159,8 +161,6 @@ const orderResolvers = {
           },
           { $count: "total" },
         ]).then((res) => (res[0] ? res[0].total : 0))
-
-        console.log(data.length > first)
 
         return {
           total,
@@ -311,7 +311,6 @@ const orderResolvers = {
           throw new GraphQLError("Order not found", {
             extensions: { code: "NOT_FOUND" },
           })
-        console.log(args.status)
         await pusherServer.trigger("tables", "refresh-table", {
           ok: true,
           message: `Order from ${order.orderNumber} ${
