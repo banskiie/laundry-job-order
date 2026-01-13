@@ -437,10 +437,10 @@ const Page = () => {
           value={
             filter.length
               ? (filter.find((f) => f.key === "addedToPOS")?.value as string)
-              : "*"
+              : "all"
           }
           onValueChange={(value) => {
-            if (value === "*")
+            if (value === "all")
               setFilter((prev) => prev.filter((f) => f.key !== "addedToPOS"))
             else
               setFilter((prev) => [
@@ -454,7 +454,7 @@ const Page = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="*">All Orders</SelectItem>
+              <SelectItem value="all">All Orders</SelectItem>
               <SelectItem value="ADDED">Added to POS</SelectItem>
               <SelectItem value="UNADDED">Not in POS</SelectItem>
             </SelectGroup>
