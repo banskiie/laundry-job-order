@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { OrderStatus, POSStatus } from "@/types/order.interface"
+import { IOrder, OrderStatus, POSStatus } from "@/types/order.interface"
 import { useState } from "react"
 import PaymentBadge from "@/components/payment-badge"
 import UploadPaymentForm from "./upload-payment"
@@ -46,6 +46,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { DialogClose } from "@radix-ui/react-dialog"
 
 const ORDER = gql`
   query Order($_id: ID!) {
@@ -57,6 +66,13 @@ const ORDER = gql`
       amountToBePaid
       amountMissing
       addedToPOS
+      comments {
+        message
+        date
+        by {
+          name
+        }
+      }
       orderStatuses {
         status
         date
@@ -90,6 +106,15 @@ const CHANGE_ORDER_STATUS = gql`
 const CHANGE_POS_STATUS = gql`
   mutation ChangeAddedToPOSStatus($_id: ID!, $status: POSStatus!) {
     changeAddedToPOSStatus(_id: $_id, status: $status) {
+      ok
+      message
+    }
+  }
+`
+
+const INSERT_COMMENT = gql`
+  mutation InsertComment($orderId: ID!, $message: String!) {
+    insertComment(orderId: $orderId, message: $message) {
       ok
       message
     }
@@ -322,6 +347,68 @@ const VerifyWarning = ({
   )
 }
 
+const Comments = ({
+  _id,
+  onClose,
+  order,
+}: {
+  _id?: string
+  onClose: () => void
+  order: IOrder
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [comment, { loading }] = useMutation(INSERT_COMMENT, {
+    variables: { _id, status: OrderStatus.VERIFIED },
+  })
+  const [message, setMessage] = useState<string>("")
+
+  return (
+    <Dialog open={openWarning} onOpenChange={setOpenWarning}>
+      <DialogTrigger asChild>
+        <Button className="bg-blue-800 hover:bg-blue-800/90">
+          Comments ({order?.comments?.length})
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Comments</DialogTitle>
+          <div className="max-h-100 space-y-1">
+            {(order?.comments || []).map((c, i) => (
+              <div className="-space-y-1" key={i}>
+                <span className="block text-sm text-muted-foreground">
+                  {c.by.name} • {format(c.date, "MMM dd, yyyy")}
+                </span>
+                <span className="block">{c.message}</span>
+              </div>
+            ))}
+          </div>
+          <Input
+            placeholder="Enter your comment here..."
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                comment({
+                  variables: {
+                    message,
+                    orderId: order?._id,
+                  },
+                })
+                onClose()
+              }
+            }}
+          ></Input>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose onClick={() => setOpenWarning(false)} asChild>
+            <Button>Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 const ChangePOSStatus = ({
   _id,
   onClose,
@@ -371,14 +458,14 @@ const ChangePOSStatus = ({
         <Button
           variant="outline"
           className={cn(
-            "w-full border-purple-800 text-purple-800 hover:bg-purple-800/10"
+            "w-full border-purple-800 text-purple-800 hover:bg-purple-800/10",
           )}
         >
           {isAdmin
             ? "Change POS Status"
             : posStatus === POSStatus.ADDED
-            ? "Remove from POS"
-            : "Add to POS"}
+              ? "Remove from POS"
+              : "Add to POS"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -392,8 +479,8 @@ const ChangePOSStatus = ({
             {isAdmin
               ? "You are changing the POS status of this order."
               : status === POSStatus.ADDED
-              ? "You will remove this order from the POS system."
-              : "You will add this order to the POS system. This will be verified by an admin."}
+                ? "You will remove this order from the POS system."
+                : "You will add this order to the POS system. This will be verified by an admin."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {isAdmin && (
@@ -432,8 +519,8 @@ const ChangePOSStatus = ({
             {isAdmin
               ? "Yes, change POS status"
               : status === POSStatus.ADDED
-              ? "Yes, remove from POS"
-              : "Yes, add to POS"}
+                ? "Yes, remove from POS"
+                : "Yes, add to POS"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -485,7 +572,7 @@ const ViewOrderHistory = ({
             {mergedStatuses
               .sort(
                 (a, b) =>
-                  new Date(b.date).getTime() - new Date(a.date).getTime()
+                  new Date(b.date).getTime() - new Date(a.date).getTime(),
               )
               .map((item: any, index: number) => (
                 <div key={index} className="flex items-start">
@@ -493,7 +580,7 @@ const ViewOrderHistory = ({
                     <Dot
                       className={cn(
                         "size-12 -my-3.5",
-                        index > 0 ? "text-gray-400/80" : "text-green-800"
+                        index > 0 ? "text-gray-400/80" : "text-green-800",
                       )}
                     />
                     {index < mergedStatuses.length - 1 && (
@@ -503,7 +590,7 @@ const ViewOrderHistory = ({
                   <div
                     className={cn(
                       "flex flex-col -my-px",
-                      index > 0 ? "text-muted-foreground" : "text-green-800"
+                      index > 0 ? "text-muted-foreground" : "text-green-800",
                     )}
                   >
                     <span className="block -mb-1">
@@ -669,6 +756,7 @@ const ViewOrder = ({
             </div>
           </div>
           <SheetFooter>
+            <Comments _id={order?._id} onClose={onClose} order={order} />
             {showEdit && <OrderForm _id={order?._id} onCloseParent={onClose} />}
             {showReadyToPay && (
               <ReadyToPayWarning _id={order?._id} onClose={onClose} />

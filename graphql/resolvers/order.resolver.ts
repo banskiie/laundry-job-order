@@ -18,14 +18,14 @@ const orderResolvers = {
     order: async (_: any, args: { _id: string }) => {
       try {
         const order = await Order.findById(args._id).populate(
-          "orderStatuses.by paymentStatuses.by"
+          "orderStatuses.by paymentStatuses.by comments.by",
         )
 
         const payments = await Payment.find({ order: args._id })
 
         const paidAmount = payments.reduce(
           (acc, payment) => acc + payment.amountPaid,
-          0
+          0,
         )
 
         if (!order)
@@ -42,7 +42,7 @@ const orderResolvers = {
     },
     orders: async (
       _: any,
-      { first, after, search, filter, sort }: IDataTableInput
+      { first, after, search, filter, sort }: IDataTableInput,
     ) => {
       try {
         const matchStage: Record<string, any> = {}
@@ -168,7 +168,7 @@ const orderResolvers = {
           edges,
           pageInfo: {
             endCursor: edges.length
-              ? edges[edges.length - 1]?.cursor ?? null
+              ? (edges[edges.length - 1]?.cursor ?? null)
               : null,
             hasNextPage: data.length > first,
           },
@@ -225,7 +225,7 @@ const orderResolvers = {
           args.input,
           {
             new: true,
-          }
+          },
         )
         await pusherServer.trigger("tables", "refresh-table", {
           ok: true,
@@ -258,10 +258,50 @@ const orderResolvers = {
         throw error
       }
     },
+    insertComment: async (
+      _: any,
+      args: { orderId: string; message: string },
+      context: any,
+    ) => {
+      try {
+        // if (!context.session)
+        //   throw new GraphQLError("Unauthorized", {
+        //     extensions: { code: "UNAUTHORIZED" },
+        //   })
+
+        const order = await Order.findByIdAndUpdate(
+          args.orderId,
+          {
+            $push: {
+              comments: {
+                message: args.message,
+                by: context.user?.session?._id || "68e60c3b9b9a7e67081ceaed",
+                date: new Date(),
+              },
+            },
+          },
+          {
+            new: true,
+          },
+        )
+
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `Added a new comment on ${order.customerName}'s order.`,
+        })
+
+        return {
+          ok: true,
+          message: `Added a new comment on ${order.customerName}'s order.`,
+        }
+      } catch (error) {
+        throw error
+      }
+    },
     changeOrderStatus: async (
       _: any,
       args: { _id: string; status: OrderStatus },
-      context: any
+      context: any,
     ) => {
       try {
         if (!context.session)
@@ -299,7 +339,7 @@ const orderResolvers = {
     changeAddedToPOSStatus: async (
       _: any,
       args: { _id: string; status: POSStatus },
-      context: any
+      context: any,
     ) => {
       try {
         if (!context.session)

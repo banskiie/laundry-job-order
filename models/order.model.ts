@@ -1,5 +1,6 @@
 import { model, models, Schema } from "mongoose"
 import {
+  IComment,
   IPaymentStatusItem,
   OrderStatus,
   PaymentStatus,
@@ -18,7 +19,7 @@ const OrderStatusItem = new Schema<IOrderStatusItem>(
     date: { type: Date, required: true },
     by: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
-  { _id: false }
+  { _id: false },
 )
 
 const PaymentStatusItem = new Schema<IPaymentStatusItem>(
@@ -32,7 +33,20 @@ const PaymentStatusItem = new Schema<IPaymentStatusItem>(
     by: { type: Schema.Types.ObjectId, ref: "User", required: true },
     amountPaid: { type: Number, required: false },
   },
-  { _id: false }
+  { _id: false },
+)
+
+const Comment = new Schema<IComment>(
+  {
+    message: {
+      type: String,
+    },
+    date: { type: Date, required: true },
+    by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  {
+    _id: false,
+  },
 )
 
 const Order = new Schema<IOrder>(
@@ -48,8 +62,16 @@ const Order = new Schema<IOrder>(
       enum: Object.values(POSStatus),
       default: POSStatus.UNADDED,
     },
+    comments: {
+      type: [
+        {
+          type: Comment,
+        },
+      ],
+      default: [],
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 )
 
 export default models.Order || model<IOrder>("Order", Order)

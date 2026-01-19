@@ -35,6 +35,12 @@ export interface IPaymentStatusItem {
   amountPaid?: number
 }
 
+export interface IComment {
+  message: string
+  by: IUser
+  date: Date
+}
+
 export interface IOrder extends Document {
   _id: Types.ObjectId
   orderNumber: string
@@ -44,6 +50,7 @@ export interface IOrder extends Document {
   orderStatuses: IOrderStatusItem[]
   paymentStatuses: IPaymentStatusItem[]
   addedToPOS: POSStatus
+  comments?: IComment[]
 }
 
 export interface IOrderStatusInput {

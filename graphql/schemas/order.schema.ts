@@ -34,6 +34,12 @@ export default gql`
     amountPaid: Float
   }
 
+  type Comment {
+    message: String!
+    by: User!
+    date: DateTime!
+  }
+
   type Order {
     _id: ID!
     orderNumber: String!
@@ -46,6 +52,7 @@ export default gql`
     addedToPOS: POSStatus
     createdAt: DateTime!
     updatedAt: DateTime!
+    comments: [Comment]
   }
 
   type OrderConnection {
@@ -104,5 +111,6 @@ export default gql`
     deleteOrder(_id: ID!): Response!
     changeOrderStatus(_id: ID!, status: OrderStatus!): Response!
     changeAddedToPOSStatus(_id: ID!, status: POSStatus!): Response!
+    insertComment(orderId: ID!, message: String!): Response!
   }
 `
