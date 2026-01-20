@@ -264,18 +264,13 @@ const orderResolvers = {
       context: any,
     ) => {
       try {
-        // if (!context.session)
-        //   throw new GraphQLError("Unauthorized", {
-        //     extensions: { code: "UNAUTHORIZED" },
-        //   })
-
         const order = await Order.findByIdAndUpdate(
           args.orderId,
           {
             $push: {
               comments: {
                 message: args.message,
-                by: context.user?.session?._id || "68e60c3b9b9a7e67081ceaed",
+                by: context.session?.user?._id,
                 date: new Date(),
               },
             },
@@ -331,6 +326,37 @@ const orderResolvers = {
           message: `Order is now ${args.status
             .replaceAll("_", " ")
             .toLowerCase()}`,
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+    revertCancel: async (_: any, args: { _id: string }, context: any) => {
+      try {
+        // if (!context.session)
+        //   throw new GraphQLError("Unauthorized", {
+        //     extensions: { code: "UNAUTHORIZED" },
+        //   })
+        const order = await Order.findById(args._id)
+        if (!order)
+          throw new GraphQLError("Order not found", {
+            extensions: { code: "NOT_FOUND" },
+          })
+        await pusherServer.trigger("tables", "refresh-table", {
+          ok: true,
+          message: `Cancelled order from ${order.customerName} is reverted.`,
+        })
+        if (
+          order.orderStatuses[order.orderStatuses.length - 1].status ===
+          OrderStatus.CANCELLED
+        )
+          order.orderStatuses.pop()
+        else throw new Error("Latest status for this order is not cancelled")
+
+        await order.save()
+        return {
+          ok: true,
+          message: `Cancelled order from ${order.customerName} is reverted.`,
         }
       } catch (error) {
         throw error

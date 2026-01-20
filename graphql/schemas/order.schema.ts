@@ -112,5 +112,6 @@ export default gql`
     changeOrderStatus(_id: ID!, status: OrderStatus!): Response!
     changeAddedToPOSStatus(_id: ID!, status: POSStatus!): Response!
     insertComment(orderId: ID!, message: String!): Response!
+    revertCancel(_id: ID!): Response!
   }
 `

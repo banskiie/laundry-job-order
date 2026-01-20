@@ -121,6 +121,15 @@ const INSERT_COMMENT = gql`
   }
 `
 
+const REVERT_CANCEL = gql`
+  mutation RevertCancel($_id: ID!) {
+    revertCancel(_id: $_id) {
+      ok
+      message
+    }
+  }
+`
+
 const ReadyToPayWarning = ({
   _id,
   onClose,
@@ -228,6 +237,63 @@ const CancelWarning = ({
             }
           >
             Yes, cancel
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+const RevertCancel = ({
+  _id,
+  onClose,
+}: {
+  _id?: string
+  onClose: () => void
+}) => {
+  const [openWarning, setOpenWarning] = useState<boolean>(false)
+  const [revert, { loading }] = useMutation(REVERT_CANCEL, {
+    variables: { _id },
+  })
+
+  const onCompleted = () => {
+    setOpenWarning(false)
+    onClose()
+  }
+
+  return (
+    <AlertDialog open={openWarning} onOpenChange={setOpenWarning}>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          Revert Cancel
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You will set this order to the last status before being cancelled.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOpenWarning(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            variant="outline"
+            loading={loading}
+            onClick={async () =>
+              await revert().then((data: any) => {
+                const message = data.data?.revertCancel?.message
+                if (message) toast.success(message)
+                onCompleted()
+              })
+            }
+          >
+            Yes, revert
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -671,6 +737,8 @@ const ViewOrder = ({
     order.amountMissing > 0
   const showVerify = latestOrderStatus === OrderStatus.RELEASED && isAdmin
   const showPOSStatus = user?.role !== "STAFF"
+  const showRevertCancel =
+    isAdmin && latestOrderStatus === OrderStatus.CANCELLED
 
   if (loading) return <Skeleton className="h-[120px] w-full rounded-none" />
 
@@ -762,6 +830,9 @@ const ViewOrder = ({
               <ReadyToPayWarning _id={order?._id} onClose={onClose} />
             )}
             {showCancel && <CancelWarning _id={order?._id} onClose={onClose} />}
+            {showRevertCancel && (
+              <RevertCancel _id={order?._id} onClose={onClose} />
+            )}
             {showUpload && (
               <UploadPaymentForm
                 _id={order?._id}
