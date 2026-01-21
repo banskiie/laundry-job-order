@@ -730,9 +730,7 @@ const ViewOrder = ({
 
   const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
   const showReadyToPay =
-    latestOrderStatus === OrderStatus.RECEIVED &&
-    !isCashier &&
-    isAddedOrVerified
+    latestOrderStatus === OrderStatus.RECEIVED && !isCashier
   const showCancel = latestOrderStatus === OrderStatus.RECEIVED
   const showRelease =
     latestOrderStatus === OrderStatus.READY_TO_PAY &&
@@ -741,7 +739,8 @@ const ViewOrder = ({
   const showUpload =
     (latestOrderStatus === OrderStatus.RELEASED ||
       latestOrderStatus === OrderStatus.READY_TO_PAY) &&
-    order.amountMissing > 0
+    order.amountMissing > 0 &&
+    isAddedOrVerified
   const showVerify = latestOrderStatus === OrderStatus.RELEASED && isAdmin
   const showPOSStatus = user?.role !== "STAFF"
   const showRevertCancel =
