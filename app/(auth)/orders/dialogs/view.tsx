@@ -713,6 +713,9 @@ const ViewOrder = ({
   const user = sessionData?.user as IUser
   const isCashier = user?.role === "CASHIER"
   const isAdmin = user?.role === "ADMIN"
+  const isAddedOrVerified =
+    (data as any)?.order?.addedToPOS == "ADDED" ||
+    (data as any)?.order?.addedToPOS == "VERIFIED"
 
   const latestOrderStatus = (data as any)?.order?.orderStatuses[
     (data as any)?.order?.orderStatuses.length - 1
@@ -727,10 +730,14 @@ const ViewOrder = ({
 
   const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
   const showReadyToPay =
-    latestOrderStatus === OrderStatus.RECEIVED && !isCashier
+    latestOrderStatus === OrderStatus.RECEIVED &&
+    !isCashier &&
+    isAddedOrVerified
   const showCancel = latestOrderStatus === OrderStatus.RECEIVED
   const showRelease =
-    latestOrderStatus === OrderStatus.READY_TO_PAY && order.amountMissing <= 0
+    latestOrderStatus === OrderStatus.READY_TO_PAY &&
+    order.amountMissing <= 0 &&
+    isAddedOrVerified
   const showUpload =
     (latestOrderStatus === OrderStatus.RELEASED ||
       latestOrderStatus === OrderStatus.READY_TO_PAY) &&
