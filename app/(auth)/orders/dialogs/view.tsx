@@ -741,7 +741,8 @@ const ViewOrder = ({
       latestOrderStatus === OrderStatus.READY_TO_PAY) &&
     order.amountMissing > 0 &&
     isAddedOrVerified
-  const showVerify = latestOrderStatus === OrderStatus.RELEASED && isAdmin
+  const showVerify =
+    latestOrderStatus === OrderStatus.RELEASED && isAdmin && isAddedOrVerified
   const showPOSStatus = user?.role !== "STAFF"
   const showRevertCancel =
     isAdmin && latestOrderStatus === OrderStatus.CANCELLED
