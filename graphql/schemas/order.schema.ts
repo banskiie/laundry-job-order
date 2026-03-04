@@ -103,6 +103,12 @@ export default gql`
       filter: [Filter]
       sort: Sort
     ): OrderConnection!
+    orderList(
+      rows: Int = 10
+      page: Int = 1
+      search: String
+      filter: [Filter]
+    ): OrderConnection!
   }
 
   type Mutation {
