@@ -177,6 +177,115 @@ const orderResolvers = {
         throw error
       }
     },
+    orderList: async (
+      _: any,
+      args: {
+        rows?: number
+        page?: number
+        search?: string
+        filter?: {
+          key: string
+          value: string
+        }[]
+      },
+    ) => {
+      try {
+        const q = {
+          $and: [
+            {
+              $or: [
+                { customerName: { $regex: args.search || "", $options: "i" } },
+                { orderNumber: { $regex: args.search || "", $options: "i" } },
+              ],
+            },
+            ...(args.filter && args.filter.length
+              ? [
+                  {
+                    $or: args.filter.map(({ key, value }) => ({
+                      [key]: { $regex: value, $options: "i" },
+                    })),
+                  },
+                ]
+              : [{}]),
+          ],
+        } as Record<string, any>
+
+        const agg: PipelineStage[] = [
+          {
+            $addFields: {
+              dateReceived: { $arrayElemAt: ["$orderStatuses.date", 0] },
+              currentStatus: { $arrayElemAt: ["$orderStatuses.status", -1] },
+              paymentStatus: { $arrayElemAt: ["$paymentStatuses.status", -1] },
+            },
+          },
+          {
+            $match: q,
+          },
+          {
+            $sort: {
+              dateReceived: -1,
+            },
+          },
+          {
+            $skip: (args.page ? args.page - 1 : 0) * (args.rows || 10),
+          },
+          {
+            $limit: args.rows || 10,
+          },
+          {
+            $project: {
+              addedToPOS: 1,
+              orderNumber: 1,
+              customerName: 1,
+              amountToBePaid: 1,
+              dateReceived: 1,
+              currentStatus: 1,
+              paymentStatus: 1,
+            },
+          },
+        ]
+
+        const total = await Order.find(q).countDocuments()
+        const totalAgg = await Order.aggregate(agg).count("total")
+        console.log(totalAgg)
+        const pages = Math.ceil(total / (args.rows || 10))
+        const orders = await Order.find(q)
+          .populate("orderStatuses.by paymentStatuses.by comments.by")
+          .limit(args.rows || 10)
+          .skip((args.page || 1 - 1) * (args.rows || 10))
+          .sort({ _id: -1 })
+
+        const ordersList = await Order.aggregate(agg)
+        return {
+          total,
+          pages,
+          edges: ordersList.map((order) => ({
+            node: {
+              _id: order._id,
+              orderNumber: order.orderNumber,
+              customerName: order.customerName,
+              amountToBePaid: order.amountToBePaid,
+              dateReceived: order.dateReceived,
+              currentStatus: order.currentStatus,
+              paymentStatus: order.paymentStatus,
+              addedToPOS: order.addedToPOS,
+            },
+            cursor: toCursor("order", order._id.toString()),
+          })),
+          pageInfo: {
+            endCursor: ordersList.length
+              ? toCursor(
+                  "order",
+                  ordersList[ordersList.length - 1]._id.toString(),
+                )
+              : null,
+            hasNextPage: total > (args.rows || 10),
+          },
+        }
+      } catch (error) {
+        throw error
+      }
+    },
   },
   Mutation: {
     createOrder: async (_: any, args: { input: IOrderInput }, context: any) => {
