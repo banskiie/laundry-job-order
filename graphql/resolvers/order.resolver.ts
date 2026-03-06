@@ -223,7 +223,7 @@ const orderResolvers = {
           },
           {
             $sort: {
-              dateReceived: -1,
+              orderNumber: -1,
             },
           },
           {
@@ -241,19 +241,13 @@ const orderResolvers = {
               dateReceived: 1,
               currentStatus: 1,
               paymentStatus: 1,
+              updatedAt: 1,
             },
           },
         ]
 
         const total = await Order.find(q).countDocuments()
-        const totalAgg = await Order.aggregate(agg).count("total")
-        console.log(totalAgg)
         const pages = Math.ceil(total / (args.rows || 10))
-        const orders = await Order.find(q)
-          .populate("orderStatuses.by paymentStatuses.by comments.by")
-          .limit(args.rows || 10)
-          .skip((args.page || 1 - 1) * (args.rows || 10))
-          .sort({ _id: -1 })
 
         const ordersList = await Order.aggregate(agg)
         return {
@@ -269,6 +263,7 @@ const orderResolvers = {
               currentStatus: order.currentStatus,
               paymentStatus: order.paymentStatus,
               addedToPOS: order.addedToPOS,
+              updatedAt: order.updatedAt,
             },
             cursor: toCursor("order", order._id.toString()),
           })),

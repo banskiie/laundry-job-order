@@ -460,7 +460,7 @@ const Comments = ({
                     orderId: order?._id,
                   },
                 })
-                onClose()
+                // onClose()
               }
             }}
           ></Input>
@@ -751,7 +751,7 @@ const ViewOrder = ({
 
   const onClose = () => {
     setOpenView(false)
-    refetch()
+    refreshData()
   }
 
   return (

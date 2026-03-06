@@ -46,12 +46,13 @@ const ORDERS_LIST = gql`
 `
 
 const Page = () => {
-  const [pageIndex, setPageIndex] = useState<number>(0)
+  const [page, setPage] = useState<number>(1)
   const [searchKeyword, setSearchKeyword] = useState<string>("")
   const [search, setSearch] = useState<string>("")
   const { data, fetchMore, refetch, loading } = useQuery(ORDERS_LIST, {
     variables: {
       search,
+      page,
     },
   })
   const pageCount = useMemo(
@@ -73,10 +74,10 @@ const Page = () => {
   }, [refetch])
 
   const nextPage = () => {
-    setPageIndex((prev) => prev + 1)
+    setPage((prev) => prev + 1)
     fetchMore({
       variables: {
-        page: pageIndex + 1,
+        page: page + 1,
       },
       updateQuery: (prevResult, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prevResult
@@ -86,11 +87,11 @@ const Page = () => {
   }
 
   const prevPage = () => {
-    if (pageIndex > 0) {
-      setPageIndex((prev) => prev - 1)
+    if (page > 1) {
+      setPage((prev) => prev - 1)
       fetchMore({
         variables: {
-          page: pageIndex - 1,
+          page: page - 1,
         },
         updateQuery: (prevResult, { fetchMoreResult }) => {
           if (!fetchMoreResult) return prevResult
@@ -113,7 +114,7 @@ const Page = () => {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 setSearch(searchKeyword)
-                setPageIndex(0)
+                setPage(1)
               }
             }}
           />
@@ -130,18 +131,18 @@ const Page = () => {
           <Button
             onClick={prevPage}
             variant="outline"
-            disabled={pageIndex === 0}
+            disabled={page === 1}
             size="sm"
           >
             Prev
           </Button>
           <ButtonGroupText>
-            {pageIndex + 1} of {pageCount || 1}
+            {page} of {pageCount || 1}
           </ButtonGroupText>
           <Button
             onClick={nextPage}
             variant="outline"
-            disabled={pageIndex + 1 >= pageCount}
+            disabled={page >= pageCount}
             size="sm"
           >
             Next
