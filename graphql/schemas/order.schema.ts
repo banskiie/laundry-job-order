@@ -105,7 +105,7 @@ export default gql`
     ): OrderConnection!
     orderList(
       rows: Int = 10
-      page: Int = 0
+      page: Int = 1
       search: String
       filter: [Filter]
     ): OrderConnection!

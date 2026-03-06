@@ -186,11 +186,13 @@ const orderResolvers = {
         filter?: {
           key: string
           value: string
+          type: string
         }[]
       },
     ) => {
       try {
-        const q = {
+        console.log(args.filter)
+        const q: Record<string, any> = {
           $and: [
             {
               $or: [
@@ -201,14 +203,33 @@ const orderResolvers = {
             ...(args.filter && args.filter.length
               ? [
                   {
-                    $or: args.filter.map(({ key, value }) => ({
-                      [key]: { $regex: value, $options: "i" },
-                    })),
+                    $and: args.filter.map(({ type, key, value }) => {
+                      switch (type) {
+                        case "TEXT":
+                          return { [key]: { $regex: value, $options: "i" } }
+                        case "DATE":
+                          const date = new Date(value)
+                          const startDate = startOfDay(date)
+                          const endDate = endOfDay(date)
+                          return { [key]: { $gte: startDate, $lte: endDate } }
+                        case "DATE_RANGE":
+                          const [start, end] = value
+                            .split("_")
+                            .map((date) => new Date(date))
+                          if (!start || !end) return
+                          return {
+                            [key]: {
+                              $gte: startOfDay(start),
+                              $lte: endOfDay(end),
+                            },
+                          }
+                      }
+                    }),
                   },
                 ]
-              : [{}]),
+              : []),
           ],
-        } as Record<string, any>
+        }
 
         const agg: PipelineStage[] = [
           {

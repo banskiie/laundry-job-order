@@ -12,7 +12,6 @@ import PaymentBadge from "@/components/payment-badge"
 import { toast } from "sonner"
 import { pusherClient } from "@/lib/pusher"
 import OrderForm from "./dialogs/form"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   InputGroup,
   InputGroupButton,

@@ -32,7 +32,7 @@ export default gql`
   input Filter {
     key: String!
     value: String!
-    type: FilterType!
+    type: FilterType
   }
 
   # Table Sorting
