@@ -60,7 +60,6 @@ const orderResolvers = {
           matchStage.$and = filter.map(({ key, value, type }) => {
             switch (type) {
               case "TEXT":
-                console.log(key, value)
                 if (key === "addedToPOS") return { [key]: value }
                 else return { [key]: { $regex: value, $options: "i" } }
               case "NUMBER":
@@ -191,7 +190,6 @@ const orderResolvers = {
       },
     ) => {
       try {
-        console.log(args.filter)
         const q: Record<string, any> = {
           $and: [
             {
@@ -206,6 +204,7 @@ const orderResolvers = {
                     $and: args.filter.map(({ type, key, value }) => {
                       switch (type) {
                         case "TEXT":
+                          if (key === "addedToPOS") return { [key]: { $regex: `^${value}$`, $options: "i" } }
                           return { [key]: { $regex: value, $options: "i" } }
                         case "DATE":
                           const date = new Date(value)

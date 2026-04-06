@@ -17,10 +17,20 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { OrderStatus, POSStatus } from "@/types/order.interface"
+import { DatePickerWithRange } from "@/components/date-range-picker"
 
 const ORDERS_LIST = gql`
-  query OrderList($rows: Int, $page: Int, $search: String) {
-    orderList(rows: $rows, page: $page, search: $search) {
+  query OrderList($rows: Int, $page: Int, $search: String, $filter: [Filter]) {
+    orderList(rows: $rows, page: $page, search: $search, filter: $filter) {
       total
       pages
       edges {
@@ -48,12 +58,20 @@ const Page = () => {
   const [page, setPage] = useState<number>(1)
   const [searchKeyword, setSearchKeyword] = useState<string>("")
   const [search, setSearch] = useState<string>("")
+  const [searchType, setSearchType] = useState<"🔍" | "📅">("🔍")
+  const [filter, setFilter] = useState<
+    { key: string; value: any; type: string }[]
+  >([])
   const { data, fetchMore, refetch, loading } = useQuery(ORDERS_LIST, {
     variables: {
       search,
+      filter,
       page,
     },
+    fetchPolicy: "network-only",
   })
+
+
   const pageCount = useMemo(
     () => (data as { orderList: { pages: number } })?.orderList?.pages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,21 +121,100 @@ const Page = () => {
   return (
     <div className="space-y-2 p-3">
       <OrderForm refetch={refetch} />
-      <div>
+      <div className="flex flex-col gap-2">
         <InputGroup>
-          <InputGroupButton size="icon-sm">🔍</InputGroupButton>
-          <InputGroupInput
-            placeholder="Search here..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                setSearch(searchKeyword)
-                setPage(1)
-              }
+          <InputGroupButton
+            size="icon-sm"
+            onClick={() => {
+              setSearchType((prev) => (prev === "🔍" ? "📅" : "🔍"))
+              setSearch("")
+              setFilter((prev) => prev.filter((f) => f.key !== "dateReceived"))
             }}
-          />
+          >
+            {searchType}
+          </InputGroupButton>
+          {searchType === "🔍" ? (
+            <InputGroupInput
+              placeholder="Search here..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSearch(searchKeyword)
+                  setPage(1)
+                }
+              }}
+            />
+          ) : (
+            <DatePickerWithRange setFilter={setFilter} />
+          )}
         </InputGroup>
+        <Select
+          onValueChange={(value) => {
+            setFilter((prev) => {
+              const filtered = prev.filter((f) => f.key !== "addedToPOS")
+              if (value === "all") {
+                return filtered
+              } else {
+                return [
+                  ...filtered,
+                  {
+                    key: "addedToPOS",
+                    type: "TEXT",
+                    value,
+                  },
+                ]
+              }
+            })
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="POS Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All POS Status</SelectItem>
+              <SelectItem value={POSStatus.VERIFIED}>Verified</SelectItem>
+              <SelectItem value={POSStatus.ADDED}>Added</SelectItem>
+              <SelectItem value={POSStatus.UNADDED}>Unadded</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={(value) => {
+            setFilter((prev) => {
+              const filtered = prev.filter((f) => f.key !== "currentStatus")
+              if (value === "all") {
+                return filtered
+              } else {
+                return [
+                  ...filtered,
+                  {
+                    key: "currentStatus",
+                    type: "TEXT",
+                    value,
+                  },
+                ]
+              }
+            })
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Order Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All Order Status</SelectItem>
+              <SelectItem value={OrderStatus.VERIFIED}>Verified</SelectItem>
+              <SelectItem value={OrderStatus.READY_TO_PAY}>
+                Ready to Pay
+              </SelectItem>
+              <SelectItem value={OrderStatus.RELEASED}>Released</SelectItem>
+              <SelectItem value={OrderStatus.CANCELLED}>Cancelled</SelectItem>
+              <SelectItem value={OrderStatus.RECEIVED}>Received</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
       <div className="flex justify-between items-center">
         <span>
