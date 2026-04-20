@@ -49,6 +49,7 @@ export default gql`
     amountMissing: Float
     orderStatuses: [OrderStatusItem!]!
     paymentStatuses: [PaymentStatusItem!]!
+    payments: [Payment]
     addedToPOS: POSStatus
     createdAt: DateTime!
     updatedAt: DateTime!

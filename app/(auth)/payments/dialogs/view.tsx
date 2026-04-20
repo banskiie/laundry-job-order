@@ -43,7 +43,7 @@ const ViewPayment = ({
 }: Readonly<{
   children: React.ReactNode
   _id?: string
-  refetch: () => void
+  refetch?: () => void
 }>) => {
   const { data: sessionData } = useSession()
   const isAdmin = (sessionData?.user as IUser)?.role === "ADMIN"
@@ -73,7 +73,7 @@ const ViewPayment = ({
 
   const onClose = () => {
     setOpenView(false)
-    refetch()
+    refetch?.()
   }
 
   return (

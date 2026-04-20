@@ -42,7 +42,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -55,6 +54,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { DialogClose } from "@radix-ui/react-dialog"
+import ViewPayment from "../../payments/dialogs/view"
 
 const ORDER = gql`
   query Order($_id: ID!) {
@@ -87,6 +87,12 @@ const ORDER = gql`
           name
         }
         amountPaid
+      }
+      payments {
+        _id
+        proofOfPaymentURL
+        amountPaid
+        datePaid
       }
       createdAt
       updatedAt
@@ -728,6 +734,8 @@ const ViewOrder = ({
 
   const order = (data as any)?.order
 
+  if (order?.orderNumber === "6077") console.log({ order })
+
   const showEdit = isAdmin || latestOrderStatus === OrderStatus.RECEIVED
   const showReadyToPay =
     latestOrderStatus === OrderStatus.RECEIVED && !isCashier
@@ -788,10 +796,29 @@ const ViewOrder = ({
                 }
               />
             </div>
-            <div className="grid gap-1 col-span-2">
+
+            <div className="grid gap-1 col-span-1">
               <Label>Job Order No.</Label>
               <span>{order?.orderNumber}</span>
             </div>
+            {order?.payments && order.payments.length > 0 && (
+              <div className="grid gap-1 col-span-1">
+                <Label>Payments Made</Label>
+                <div className="flex flex-col">
+                  {order.payments.map((payment: any, index: number) => (
+                    <ViewPayment key={payment._id} _id={payment._id}>
+                      <span className="block text-sm text-muted-foreground hover:text-primary hover:underline hover:cursor-pointer">
+                        Payment {index + 1}:{" "}
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "PHP",
+                        }).format(payment.amountPaid)}
+                      </span>
+                    </ViewPayment>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid gap-1 col-span-2">
               <Label>Customer Name</Label>
               <span>{order?.customerName}</span>

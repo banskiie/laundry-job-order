@@ -13,6 +13,7 @@ export const schema = makeExecutableSchema({ resolvers, typeDefs })
 const server = new ApolloServer({
   schema,
 })
+
 const handler = startServerAndCreateNextHandler<NextRequest>(server, {
   context: async (req: NextRequest) => {
     await connectDB()

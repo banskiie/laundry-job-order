@@ -35,6 +35,7 @@ const orderResolvers = {
         return {
           ...order.toObject(),
           amountMissing: order.amountToBePaid - paidAmount,
+          payments,
         }
       } catch (error) {
         throw error
@@ -204,7 +205,10 @@ const orderResolvers = {
                     $and: args.filter.map(({ type, key, value }) => {
                       switch (type) {
                         case "TEXT":
-                          if (key === "addedToPOS") return { [key]: { $regex: `^${value}$`, $options: "i" } }
+                          if (key === "addedToPOS")
+                            return {
+                              [key]: { $regex: `^${value}$`, $options: "i" },
+                            }
                           return { [key]: { $regex: value, $options: "i" } }
                         case "DATE":
                           const date = new Date(value)
